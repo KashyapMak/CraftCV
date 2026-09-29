@@ -29,8 +29,6 @@ export const TemplatePickerModal: React.FC<Props> = ({
   cv,
   onSelectTemplate
 }) => {
-  if (!isOpen) return null;
-
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(cv.templateId || 'modern-executive');
   const currentTmpl = TEMPLATES.find((t) => t.id === selectedTemplateId) || TEMPLATES[0];
 
@@ -43,6 +41,15 @@ export const TemplatePickerModal: React.FC<Props> = ({
   const [totalPages, setTotalPages] = useState<number>(1);
   const previewMeasureRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync state when modal opens or cv changes
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedTemplateId(cv.templateId || 'modern-executive');
+      const tmpl = TEMPLATES.find((t) => t.id === (cv.templateId || 'modern-executive')) || TEMPLATES[0];
+      setSelectedThemeColor(cv.themeColor || tmpl.defaultColor || '#2563eb');
+    }
+  }, [isOpen, cv.templateId, cv.themeColor]);
 
   const categories = ['All', 'Modern', 'Corporate', 'Minimalist', 'Creative', 'Tech', 'Academic'];
 
@@ -94,6 +101,8 @@ export const TemplatePickerModal: React.FC<Props> = ({
     onSelectTemplate(selectedTemplateId, selectedThemeColor);
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs modal-backdrop">

@@ -17,30 +17,30 @@ export const PhrasesLibraryModal: React.FC<Props> = ({
   onInsertSummary,
   currentRole
 }) => {
-  if (!isOpen) return null;
-
   const [search, setSearch] = useState('');
   const [selectedRoleIndex, setSelectedRoleIndex] = useState(() => {
-    if (!currentRole) return 0;
-    const lower = currentRole.toLowerCase();
-    const idx = PHRASES_LIBRARY.findIndex(
-      (p) =>
-        lower.includes(p.role.toLowerCase()) ||
-        p.role.toLowerCase().includes(lower) ||
-        lower.includes(p.category.toLowerCase())
-    );
-    return idx >= 0 ? idx : 0;
+    if (currentRole) {
+      const lower = currentRole.toLowerCase();
+      const idx = PHRASES_LIBRARY.findIndex(
+        (p) =>
+          lower.includes(p.role.toLowerCase()) ||
+          p.role.toLowerCase().includes(lower) ||
+          lower.includes(p.category.toLowerCase())
+      );
+      if (idx >= 0) return idx;
+    }
+    return 0;
   });
   const [activeTab, setActiveTab] = useState<'bullets' | 'summaries' | 'skills'>('bullets');
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
 
-  const currentCategory = PHRASES_LIBRARY[selectedRoleIndex];
+  const currentCategory = PHRASES_LIBRARY[selectedRoleIndex] || PHRASES_LIBRARY[0];
 
-  const filteredBullets = currentCategory.bulletPoints.filter((b) =>
+  const filteredBullets = (currentCategory?.bulletPoints || []).filter((b) =>
     b.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredSummaries = currentCategory.summaryExamples.filter((s) =>
+  const filteredSummaries = (currentCategory?.summaryExamples || []).filter((s) =>
     s.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -49,6 +49,8 @@ export const PhrasesLibraryModal: React.FC<Props> = ({
     setCopiedIndex(id);
     setTimeout(() => setCopiedIndex(null), 2000);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs modal-backdrop">

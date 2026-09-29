@@ -56,8 +56,8 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState<'split' | 'editor' | 'preview'>('split');
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
 
-  // Export selection state (Current View-like dropdown)
-  const [exportFormat, setExportFormat] = useState<ExportFormatType>('print');
+  // Export selection state (Default to high-resolution direct PDF)
+  const [exportFormat, setExportFormat] = useState<ExportFormatType>('pdf');
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
 
@@ -189,7 +189,16 @@ export default function App() {
     if (!activeCv) return;
 
     if (format === 'print') {
-      triggerPrint();
+      const isSandboxedIframe = typeof window !== 'undefined' && window.self !== window.top;
+      if (isSandboxedIframe) {
+        // Sandboxed iframe lacks 'allow-modals' and ignores window.print()
+        // Provide the direct PDF download seamlessly
+        setIsExporting('pdf');
+        await exportDirectPdf(activeCv);
+        setIsExporting(null);
+      } else {
+        triggerPrint(activeCv);
+      }
     } else if (format === 'pdf') {
       setIsExporting('pdf');
       await exportDirectPdf(activeCv);
@@ -215,18 +224,18 @@ export default function App() {
 
   const getFormatLabel = (fmt: ExportFormatType) => {
     switch (fmt) {
-      case 'print':
-        return 'Print Document (Default)';
       case 'pdf':
         return 'PDF Document (.pdf)';
       case 'docx':
         return 'Microsoft Word (.docx)';
+      case 'print':
+        return 'Print / Save as PDF';
       case 'html':
         return 'Web Page (.html)';
       case 'json':
         return 'JSON Backup (.json)';
       default:
-        return 'Print Document';
+        return 'PDF Document (.pdf)';
     }
   };
 
@@ -683,33 +692,47 @@ export default function App() {
               </div>
             )}
 
-            {/* Right: Live Paper Preview */}
-            {(layoutMode === 'split' || layoutMode === 'preview') && (
-              <div
-                className={`flex flex-col ${
-                  layoutMode === 'preview'
-                    ? 'lg:col-span-12 max-w-5xl mx-auto w-full'
-                    : 'lg:col-span-6'
-                } ${mobileView === 'preview' ? 'block' : 'hidden lg:flex'}`}
-              >
-                <CvPreview
-                  cv={activeCv}
-                  onOpenTemplates={() => setIsTemplatesOpen(true)}
-                  onSwitchToEditor={() => setLayoutMode('editor')}
-                  onUpdateThemeColor={(color) => handleUpdateCv({ ...activeCv, themeColor: color })}
-                />
-              </div>
-            )}
-
-            {/* Hidden offscreen rendering when in editor-only mode for background PDF/Print generation */}
-            {layoutMode === 'editor' && (
-              <div className="fixed -left-[9999px] top-0 w-[794px] pointer-events-none opacity-0" aria-hidden="true">
-                <TemplateRenderer cv={activeCv} />
-              </div>
-            )}
+            {/* Right: Live Paper Preview (Always mounted to ensure synchronous PDF and print generation) */}
+            <div
+              className={`flex flex-col ${
+                layoutMode === 'preview'
+                  ? 'lg:col-span-12 max-w-5xl mx-auto w-full'
+                  : layoutMode === 'split'
+                  ? 'lg:col-span-6'
+                  : 'fixed -left-[9999px] top-0 w-[210mm] opacity-100 pointer-events-none'
+              } ${mobileView === 'preview' ? 'block' : layoutMode === 'editor' ? 'hidden lg:block' : 'hidden lg:flex'}`}
+            >
+              <CvPreview
+                cv={activeCv}
+                onOpenTemplates={() => setIsTemplatesOpen(true)}
+                onSwitchToEditor={() => setLayoutMode('editor')}
+                onUpdateThemeColor={(color) => handleUpdateCv({ ...activeCv, themeColor: color })}
+              />
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Workspace Footer */}
+      <footer className="no-print mt-auto py-3.5 border-t border-slate-200/80 bg-white/80 backdrop-blur-xs text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
+          <p>CraftCV Pro • 100% Free Forever • Zero Subscriptions • Complete Client-Side Privacy</p>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/kashyapMak"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:text-indigo-800 font-semibold transition hover:underline"
+            >
+              Explore more projects
+            </a>
+            <span className="text-slate-300">•</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Alpha v0.1.0
+            </span>
+          </div>
+        </div>
+      </footer>
 
       {/* Modals */}
       <TemplatePickerModal

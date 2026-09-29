@@ -351,7 +351,7 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
         </div>
       </div>
 
-      {/* Hidden Canonical Document for Measurement and High-Res PDF/Print Export */}
+      {/* Hidden Canonical Document for Measurement and Print */}
       <div
         id="cv-printable-document"
         ref={measureRef}
@@ -359,6 +359,115 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
         aria-hidden="true"
       >
         <TemplateRenderer cv={cv} containerId={undefined} />
+      </div>
+
+      {/* Hidden Canonical Full-Fidelity Export Container (Clean, unscaled, no guides, always all pages for PDF generation) */}
+      <div
+        id="cv-pdf-clean-export-container"
+        className="fixed -left-[9999px] top-0 w-[210mm] bg-white pointer-events-none select-none"
+        aria-hidden="true"
+        style={{ zIndex: -9999 }}
+      >
+        {/* Export Page 1 */}
+        <div
+          id="cv-export-page-1"
+          className={`cv-export-page-sheet w-[210mm] ${
+            totalPages === 1 ? 'min-h-[297mm]' : 'h-[297mm]'
+          } bg-white relative flex flex-col justify-between overflow-hidden`}
+        >
+          <div
+            className="w-full relative overflow-hidden"
+            style={{
+              height: totalPages === 1 ? 'auto' : `${page1ContentHeightMm}mm`,
+              maxHeight: totalPages === 1 ? 'none' : `${page1ContentHeightMm}mm`
+            }}
+          >
+            <TemplateRenderer cv={cv} containerId={undefined} />
+          </div>
+          <div
+            className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+            style={{ height: `${pageMarginMm}mm` }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-400 truncate max-w-[200px]">{roleTitle}</span>
+            </div>
+            <span>Page 1 of {totalPages}</span>
+          </div>
+        </div>
+
+        {/* Export Page 2 (if totalPages > 1) */}
+        {totalPages > 1 && (
+          <div
+            id="cv-export-page-2"
+            className="cv-export-page-sheet w-[210mm] h-[297mm] bg-white relative flex flex-col justify-between overflow-hidden"
+          >
+            <div
+              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
+              style={{ height: `${pageMarginMm}mm` }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
+                <span className="text-slate-300">·</span>
+                <span className="text-slate-400">Curriculum Vitae (Continued)</span>
+              </div>
+              <span>Page 2</span>
+            </div>
+            <div
+              className="w-full relative overflow-hidden"
+              style={{
+                height: `${page2ContentHeightMm}mm`,
+                maxHeight: `${page2ContentHeightMm}mm`
+              }}
+            >
+              <div style={{ marginTop: `-${page1ContentHeightMm}mm` }}>
+                <TemplateRenderer cv={cv} containerId={undefined} />
+              </div>
+            </div>
+            <div
+              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+              style={{ height: `${pageMarginMm}mm` }}
+            >
+              <span className="text-slate-400">CV: {candidateName}</span>
+              <span>Page 2 of {totalPages}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Export Page 3 (if totalPages > 2) */}
+        {totalPages > 2 && (
+          <div
+            id="cv-export-page-3"
+            className="cv-export-page-sheet w-[210mm] h-[297mm] bg-white relative flex flex-col justify-between overflow-hidden"
+          >
+            <div
+              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
+              style={{ height: `${pageMarginMm}mm` }}
+            >
+              <span className="font-sans font-semibold text-slate-500">{candidateName} · CV</span>
+              <span>Page 3</span>
+            </div>
+            <div
+              className="w-full relative overflow-hidden"
+              style={{
+                height: `${page2ContentHeightMm}mm`,
+                maxHeight: `${page2ContentHeightMm}mm`
+              }}
+            >
+              <div style={{ marginTop: `-${page1ContentHeightMm + page2ContentHeightMm}mm` }}>
+                <TemplateRenderer cv={cv} containerId={undefined} />
+              </div>
+            </div>
+            <div
+              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+              style={{ height: `${pageMarginMm}mm` }}
+            >
+              <span className="text-slate-400">CV: {candidateName}</span>
+              <span>Page 3 of {totalPages}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* A4 Sheet Display Area (Auto-fits container width) */}

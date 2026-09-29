@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CVData, AppSettings } from '../types/cv';
 import { callAiRefinement, AiRefineResult } from '../utils/aiService';
 import { saveAppSettings } from '../utils/storage';
@@ -36,8 +36,6 @@ export const AiRefineModal: React.FC<Props> = ({
   onApplySummary,
   onApplyBullet
 }) => {
-  if (!isOpen) return null;
-
   const [provider, setProvider] = useState<'gemini' | 'openai'>(settings.aiProvider || 'gemini');
   const [apiKey, setApiKey] = useState(
     provider === 'gemini' ? settings.geminiApiKey || '' : settings.openaiApiKey || ''
@@ -64,6 +62,18 @@ export const AiRefineModal: React.FC<Props> = ({
   const [result, setResult] = useState<AiRefineResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
+
+  // Sync inputs when modal opens or cv/settings change
+  useEffect(() => {
+    if (isOpen) {
+      const p = settings.aiProvider || 'gemini';
+      setProvider(p);
+      setApiKey(p === 'gemini' ? settings.geminiApiKey || '' : settings.openaiApiKey || '');
+      setSummaryInput(cv.summary || '');
+      setBulletInput(cv.experiences[0]?.highlights[0] || 'Managed project development and led team members.');
+      setResult(null);
+    }
+  }, [isOpen, cv.summary, cv.experiences, settings.aiProvider, settings.geminiApiKey, settings.openaiApiKey]);
 
   const handleProviderChange = (newProvider: 'gemini' | 'openai') => {
     setProvider(newProvider);
@@ -204,6 +214,8 @@ export const AiRefineModal: React.FC<Props> = ({
       onClose();
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs modal-backdrop">

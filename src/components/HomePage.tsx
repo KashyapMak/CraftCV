@@ -412,9 +412,25 @@ export const HomePage: React.FC<Props> = ({
         </div>
       </section>
 
-      {/* Simple Footer */}
-      <footer className="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
-        <p>CraftCV Pro • 100% Free & No Subscription • Browser-Based & Privacy First</p>
+      {/* Application Footer */}
+      <footer className="py-6 border-t border-slate-200 bg-white text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <p>CraftCV Pro • 100% Free Forever • Zero Subscriptions • Complete Client-Side Privacy</p>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/kashyapMak"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:text-indigo-800 font-semibold transition hover:underline"
+            >
+              Explore more projects
+            </a>
+            <span className="text-slate-300">•</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Alpha v0.1.0
+            </span>
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -46,8 +46,6 @@ export const CvDashboardModal: React.FC<Props> = ({
   onOpenSettings,
   onCvImported
 }) => {
-  if (!isOpen) return null;
-
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -234,6 +232,8 @@ export const CvDashboardModal: React.FC<Props> = ({
     reader.readAsText(file);
     e.target.value = '';
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs modal-backdrop">

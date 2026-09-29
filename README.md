@@ -3,6 +3,12 @@
 > **A modern, privacy-first, 100% free web application for building recruiter-approved resumes and CVs.**  
 > Create, customize, and export professional CVs directly in your browser with zero subscriptions, zero paywalls, and zero watermarks.
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-kashyapmak.github.io%2FCraftCV-emerald?style=for-the-badge&logo=github)](https://kashyapmak.github.io/CraftCV/)
+[![Release](https://img.shields.io/badge/Release-Alpha%20v0.1.0-indigo?style=for-the-badge)](https://kashyapmak.github.io/CraftCV/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg?style=for-the-badge)](LICENSE)
+
+🔗 **Live Demo URL**: [https://kashyapmak.github.io/CraftCV/](https://kashyapmak.github.io/CraftCV/)
+
 ---
 
 ## 🌟 Why CraftCV Pro?
@@ -163,3 +169,13 @@ CraftCV Pro is built with a strict privacy-by-design architecture:
 ## 📄 License
 
 This project is open-source and available under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+
+**CraftCV Pro** • Version Alpha 0.1.0  
+*100% Free Forever • Zero Subscriptions • Complete Client-Side Privacy*  
+🌐 [Live Demo](https://kashyapmak.github.io/CraftCV/) • 📦 [Repository](https://github.com/kashyapmak/CraftCV)
+
+</div>

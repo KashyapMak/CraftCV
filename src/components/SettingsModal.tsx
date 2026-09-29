@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppSettings, CVData } from '../types/cv';
 import { saveAppSettings, getStorageUsageBytes, exportAllCVsAsJson, importCVsFromJson } from '../utils/storage';
 import { X, Settings, Shield, HardDrive, Key, Download, Upload, Check, AlertTriangle } from 'lucide-react';
@@ -20,13 +20,19 @@ export const SettingsModal: React.FC<Props> = ({
   currentCvCount,
   onReloadCVs
 }) => {
-  if (!isOpen) return null;
-
   const [limit, setLimit] = useState<number>(settings.maxCvLimit || 99);
   const [geminiKey, setGeminiKey] = useState(settings.geminiApiKey || '');
   const [openaiKey, setOpenaiKey] = useState(settings.openaiApiKey || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLimit(settings.maxCvLimit || 99);
+      setGeminiKey(settings.geminiApiKey || '');
+      setOpenaiKey(settings.openaiApiKey || '');
+    }
+  }, [isOpen, settings.maxCvLimit, settings.geminiApiKey, settings.openaiApiKey]);
 
   const storageInfo = getStorageUsageBytes();
 
@@ -71,6 +77,8 @@ export const SettingsModal: React.FC<Props> = ({
       onClose();
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs modal-backdrop">
