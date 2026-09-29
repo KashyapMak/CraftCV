@@ -278,7 +278,7 @@ export const AiRefineModal: React.FC<Props> = ({
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={`Enter your ${provider === 'gemini' ? 'Google Gemini (AI Studio)' : 'OpenAI'} API Key...`}
+                placeholder={`Enter your ${provider === 'gemini' ? 'Google Gemini' : 'OpenAI'} API Key...`}
                 className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
               />
             </div>
