@@ -1,0 +1,6 @@
+{
+  "name": "CraftCV Pro - Smart CV & Resume Builder",
+  "description": "Privacy-first browser-based CV builder with customizable professional templates, ATS optimization, Word and PDF export, and AI refinement with your own Gemini or ChatGPT key.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

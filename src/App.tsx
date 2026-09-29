@@ -1,0 +1,773 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { CVData, AppSettings } from './types/cv';
+import {
+  getAllCVs,
+  getActiveCvId,
+  setActiveCvId,
+  saveCV,
+  duplicateCV,
+  deleteCV,
+  createNewCV,
+  getAppSettings,
+  exportSingleCvJson
+} from './utils/storage';
+import { Header } from './components/Header';
+import { CvEditor } from './components/CvEditor';
+
+export type ExportFormatType = 'print' | 'pdf' | 'docx' | 'html' | 'json';
+import { CvPreview } from './components/CvPreview';
+import { AtsStrengthMeter } from './components/AtsStrengthMeter';
+import { TemplatePickerModal } from './components/TemplatePickerModal';
+import { PhrasesLibraryModal } from './components/PhrasesLibraryModal';
+import { AiRefineModal } from './components/AiRefineModal';
+import { SettingsModal } from './components/SettingsModal';
+import { CvDashboardModal } from './components/CvDashboardModal';
+import { HomePage } from './components/HomePage';
+import { TemplateRenderer } from './templates/TemplateRenderer';
+import { triggerPrint, exportDirectPdf, exportToDocx, exportStandaloneHtml } from './utils/exportCv';
+import {
+  Eye,
+  Edit3,
+  Columns,
+  Square,
+  File,
+  ChevronDown,
+  Printer,
+  Download,
+  FileDown,
+  Code,
+  Loader2
+} from 'lucide-react';
+
+export default function App() {
+  const [cvs, setCvs] = useState<CVData[]>(() => getAllCVs());
+  const [activeCvId, setActiveId] = useState<string>(() => getActiveCvId());
+  const [settings, setSettings] = useState<AppSettings>(() => getAppSettings());
+
+  // Page routing: 'home' or 'builder'
+  const [currentPage, setCurrentPage] = useState<'home' | 'builder'>('builder');
+
+  // Layout mode inside builder: 'split' (side by side), 'editor' (editor only), 'preview' (preview only)
+  const [layoutMode, setLayoutMode] = useState<'split' | 'editor' | 'preview'>('split');
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+
+  // Export selection state (Current View-like dropdown)
+  const [exportFormat, setExportFormat] = useState<ExportFormatType>('print');
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState<string | null>(null);
+
+  // Mobile view toggle (small screens)
+  const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
+
+  // Modal open states
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [isPhrasesOpen, setIsPhrasesOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Active CV reference
+  const activeCv = cvs.find((c) => c.id === activeCvId) || cvs[0];
+
+  // Auto-save on CV change
+  const handleUpdateCv = (updated: CVData) => {
+    saveCV(updated);
+    setCvs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const handleUpdateTitle = (title: string) => {
+    if (!activeCv) return;
+    handleUpdateCv({ ...activeCv, title });
+  };
+
+  const handleSelectCv = (id: string) => {
+    setActiveId(id);
+    setActiveCvId(id);
+    setCurrentPage('builder');
+  };
+
+  const handleDuplicate = (idToDuplicate?: string) => {
+    const targetId = idToDuplicate || activeCv?.id;
+    if (!targetId) return;
+    try {
+      const cloned = duplicateCV(targetId);
+      const all = getAllCVs();
+      setCvs(all);
+      setActiveId(cloned.id);
+      setCurrentPage('builder');
+    } catch (err: any) {
+      alert(err.message || 'Failed to duplicate CV');
+    }
+  };
+
+  const handleDelete = (idToDelete: string) => {
+    const { remainingCVs, activeId } = deleteCV(idToDelete);
+    setCvs(remainingCVs);
+    setActiveId(activeId);
+  };
+
+  const handleCreateNew = (fromSample = false) => {
+    try {
+      const { cv } = createNewCV(fromSample);
+      setCvs(getAllCVs());
+      setActiveId(cv.id);
+      setIsDashboardOpen(false);
+      setCurrentPage('builder');
+    } catch (err: any) {
+      alert(err.message || 'Failed to create new CV');
+    }
+  };
+
+  const handleCreateFromTemplate = (templateId: string) => {
+    try {
+      const { cv } = createNewCV(true);
+      cv.templateId = templateId;
+      saveCV(cv);
+      setCvs(getAllCVs());
+      setActiveId(cv.id);
+      setCurrentPage('builder');
+    } catch (err: any) {
+      alert(err.message || 'Failed to create new CV');
+    }
+  };
+
+  const handleReloadCVs = () => {
+    const all = getAllCVs();
+    setCvs(all);
+    const currId = getActiveCvId();
+    setActiveId(currId);
+  };
+
+  // Phrases insertion handlers
+  const handleInsertBullet = (bullet: string) => {
+    if (!activeCv) return;
+    const experiences = [...activeCv.experiences];
+    if (experiences.length === 0) {
+      experiences.push({
+        id: crypto.randomUUID(),
+        jobTitle: activeCv.personalDetails.jobTitle || 'Role',
+        employer: 'Company',
+        location: '',
+        startDate: '',
+        endDate: '',
+        isCurrent: true,
+        highlights: [bullet]
+      });
+    } else {
+      experiences[0] = {
+        ...experiences[0],
+        highlights: [...experiences[0].highlights, bullet]
+      };
+    }
+    handleUpdateCv({ ...activeCv, experiences });
+  };
+
+  const handleInsertSummary = (text: string) => {
+    if (!activeCv) return;
+    handleUpdateCv({ ...activeCv, summary: text });
+  };
+
+  // AI Refine Apply Handlers
+  const handleApplyAiSummary = (newSummary: string) => {
+    if (!activeCv) return;
+    handleUpdateCv({ ...activeCv, summary: newSummary });
+  };
+
+  const handleApplyAiBullet = (newBullet: string) => {
+    if (!activeCv) return;
+    handleInsertBullet(newBullet);
+  };
+
+  // Export handlers
+  const handleExecuteExport = async (format: ExportFormatType) => {
+    setIsExportDropdownOpen(false);
+    if (!activeCv) return;
+
+    if (format === 'print') {
+      triggerPrint();
+    } else if (format === 'pdf') {
+      setIsExporting('pdf');
+      await exportDirectPdf(activeCv);
+      setIsExporting(null);
+    } else if (format === 'docx') {
+      setIsExporting('docx');
+      await exportToDocx(activeCv);
+      setIsExporting(null);
+    } else if (format === 'html') {
+      const el = document.getElementById('cv-printable-document');
+      if (el) {
+        exportStandaloneHtml(activeCv, el.innerHTML);
+      }
+    } else if (format === 'json') {
+      exportSingleCvJson(activeCv);
+    }
+  };
+
+  const handleSelectAndExport = (format: ExportFormatType) => {
+    setExportFormat(format);
+    handleExecuteExport(format);
+  };
+
+  const getFormatLabel = (fmt: ExportFormatType) => {
+    switch (fmt) {
+      case 'print':
+        return 'Print Document (Default)';
+      case 'pdf':
+        return 'PDF Document (.pdf)';
+      case 'docx':
+        return 'Microsoft Word (.docx)';
+      case 'html':
+        return 'Web Page (.html)';
+      case 'json':
+        return 'JSON Backup (.json)';
+      default:
+        return 'Print Document';
+    }
+  };
+
+  const getFormatIcon = (fmt: ExportFormatType) => {
+    if (isExporting) {
+      return <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />;
+    }
+    switch (fmt) {
+      case 'print':
+        return <Printer className="w-3.5 h-3.5 text-indigo-600" />;
+      case 'pdf':
+        return <Download className="w-3.5 h-3.5 text-rose-600" />;
+      case 'docx':
+        return <FileDown className="w-3.5 h-3.5 text-blue-600" />;
+      case 'html':
+        return <Code className="w-3.5 h-3.5 text-emerald-600" />;
+      case 'json':
+        return <Download className="w-3.5 h-3.5 text-slate-500" />;
+      default:
+        return <Printer className="w-3.5 h-3.5 text-indigo-600" />;
+    }
+  };
+
+  // If currently on Landing / Home page
+  if (currentPage === 'home') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <HomePage
+          totalExistingCvs={cvs.length}
+          maxLimit={settings.maxCvLimit}
+          onStartBlank={() => handleCreateNew(false)}
+          onStartSample={() => handleCreateNew(true)}
+          onOpenDashboard={() => setIsDashboardOpen(true)}
+          onSelectTemplateToStart={(tplId: string) => handleCreateFromTemplate(tplId)}
+        />
+
+        {/* Modals accessible from Home */}
+        <CvDashboardModal
+          isOpen={isDashboardOpen}
+          onClose={() => setIsDashboardOpen(false)}
+          cvs={cvs}
+          activeCvId={activeCvId}
+          maxLimit={settings.maxCvLimit}
+          onSelectCv={handleSelectCv}
+          onCreateNew={handleCreateNew}
+          onDuplicateCv={(id) => handleDuplicate(id)}
+          onDeleteCv={handleDelete}
+          onCvImported={handleReloadCVs}
+          onOpenSettings={() => {
+            setIsDashboardOpen(false);
+            setIsSettingsOpen(true);
+          }}
+        />
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          onUpdateSettings={setSettings}
+          currentCvCount={cvs.length}
+          onReloadCVs={handleReloadCVs}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-100/70 flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+      {/* Top Application Header */}
+      <Header
+        cv={activeCv}
+        cvsCount={cvs.length}
+        maxLimit={settings.maxCvLimit}
+        onUpdateTitle={handleUpdateTitle}
+        onOpenDashboard={() => setIsDashboardOpen(true)}
+        onOpenTemplates={() => setIsTemplatesOpen(true)}
+        onOpenAi={() => setIsAiOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onGoHome={() => setCurrentPage('home')}
+      />
+
+      {/* Mobile Tab Switcher (Visible only on small viewports) */}
+      <div className="no-print lg:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMobileView('editor')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            mobileView === 'editor'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>Editor & Input</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView('preview')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            mobileView === 'preview'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>Live CV Preview</span>
+        </button>
+      </div>
+
+      {/* Main Workspace */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
+        {/* Real-time ATS & Profile Completion Meter */}
+        <div className="no-print">
+          <AtsStrengthMeter
+            cv={activeCv}
+            onOpenPhrases={() => setIsPhrasesOpen(true)}
+            onOpenAi={() => setIsAiOpen(true)}
+          />
+        </div>
+
+        {/* Dynamic Workspace Container */}
+        <div className="flex-1 min-h-[750px] flex flex-col">
+          {/* Subheader: View Switcher and Current View-like Download Selection */}
+          <div className="no-print flex flex-wrap items-center justify-between gap-3 pb-3 text-xs">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+              {/* Current View Selector */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500">Current View:</span>
+
+                {/* View Selection Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsViewDropdownOpen(!isViewDropdownOpen);
+                      setIsExportDropdownOpen(false);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 shadow-2xs hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                  >
+                    {layoutMode === 'split' && <Columns className="w-3.5 h-3.5 text-indigo-600" />}
+                    {layoutMode === 'editor' && <Square className="w-3.5 h-3.5 text-indigo-600" />}
+                    {layoutMode === 'preview' && <File className="w-3.5 h-3.5 text-indigo-600" />}
+
+                    <span>
+                      {layoutMode === 'split'
+                        ? 'Side by Side (Editor + Live Preview)'
+                        : layoutMode === 'editor'
+                        ? 'Editor Only (Focused Edit)'
+                        : 'Live Preview Only (Full Document)'}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
+
+                  {isViewDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setIsViewDropdownOpen(false)}
+                      />
+                      <div className="absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Select Workspace View
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setLayoutMode('split');
+                            setIsViewDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            layoutMode === 'split'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Columns className="w-4 h-4 text-indigo-600" />
+                          <div>
+                            <div>Side by Side</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Editor on the left, live preview on the right
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setLayoutMode('editor');
+                            setIsViewDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            layoutMode === 'editor'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Square className="w-4 h-4 text-indigo-600" />
+                          <div>
+                            <div>Editor Only</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Full-width focused input without preview distraction
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setLayoutMode('preview');
+                            setIsViewDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            layoutMode === 'preview'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <File className="w-4 h-4 text-indigo-600" />
+                          <div>
+                            <div>Live Preview Only</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Spacious full A4 presentation view
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="h-4 w-px bg-slate-300 hidden sm:block" />
+
+              {/* Current View-style Selection for Print, PDF, and Word */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500">Download:</span>
+
+                {/* Export Dropdown in identical Current View style */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportDropdownOpen(!isExportDropdownOpen);
+                      setIsViewDropdownOpen(false);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 shadow-2xs hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                  >
+                    {getFormatIcon(exportFormat)}
+                    <span>{getFormatLabel(exportFormat)}</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
+
+                  {isExportDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setIsExportDropdownOpen(false)}
+                      />
+                      <div className="absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Select Download Format
+                        </div>
+
+                        {/* Print */}
+                        <button
+                          onClick={() => handleSelectAndExport('print')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            exportFormat === 'print'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Printer className="w-4 h-4 text-indigo-600 shrink-0" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span>Print Document</span>
+                              <span className="text-[10px] px-1.5 py-0.2 bg-indigo-100 text-indigo-700 rounded font-semibold">
+                                Default
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Native system print dialog or direct save to PDF
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* PDF */}
+                        <button
+                          onClick={() => handleSelectAndExport('pdf')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            exportFormat === 'pdf'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Download className="w-4 h-4 text-rose-600 shrink-0" />
+                          <div className="flex-1">
+                            <div className="font-bold">PDF Document (.pdf)</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Direct A4 PDF download matching current layout
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Word */}
+                        <button
+                          onClick={() => handleSelectAndExport('docx')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            exportFormat === 'docx'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <FileDown className="w-4 h-4 text-blue-600 shrink-0" />
+                          <div className="flex-1">
+                            <div className="font-bold">Microsoft Word (.docx)</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Real OpenXML .docx file matching CV structure
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Standalone HTML */}
+                        <button
+                          onClick={() => handleSelectAndExport('html')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            exportFormat === 'html'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Code className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <div className="flex-1">
+                            <div>Standalone Web Page (.html)</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Self-contained offline webpage with CSS
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* JSON Backup */}
+                        <button
+                          onClick={() => handleSelectAndExport('json')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            exportFormat === 'json'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Download className="w-4 h-4 text-slate-500 shrink-0" />
+                          <div className="flex-1">
+                            <div>JSON Backup (.json)</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Raw structured data file to backup/restore
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Direct Trigger Action Button */}
+                <button
+                  type="button"
+                  disabled={!!isExporting}
+                  onClick={() => handleExecuteExport(exportFormat)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-2xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                  title={`Trigger ${exportFormat.toUpperCase()}`}
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Exporting...</span>
+                    </>
+                  ) : exportFormat === 'print' ? (
+                    <>
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Print Now</span>
+                    </>
+                  ) : exportFormat === 'pdf' ? (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download PDF</span>
+                    </>
+                  ) : exportFormat === 'docx' ? (
+                    <>
+                      <FileDown className="w-3.5 h-3.5" />
+                      <span>Download Word</span>
+                    </>
+                  ) : exportFormat === 'html' ? (
+                    <>
+                      <Code className="w-3.5 h-3.5" />
+                      <span>Download HTML</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download JSON</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick action buttons according to mode */}
+            <div className="flex items-center gap-2">
+              {layoutMode === 'editor' && (
+                <button
+                  onClick={() => setLayoutMode('preview')}
+                  className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-indigo-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Switch to Preview</span>
+                </button>
+              )}
+              {layoutMode === 'preview' && (
+                <button
+                  onClick={() => setLayoutMode('editor')}
+                  className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-indigo-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Switch to Editor</span>
+                </button>
+              )}
+              {layoutMode !== 'split' && (
+                <button
+                  onClick={() => setLayoutMode('split')}
+                  className="px-2.5 py-1 text-xs font-semibold bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-100 flex items-center gap-1 cursor-pointer"
+                >
+                  <Columns className="w-3.5 h-3.5" />
+                  <span>Restore Side by Side</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Conditional Layout Rendering */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left: Form Editor */}
+            {(layoutMode === 'split' || layoutMode === 'editor') && (
+              <div
+                className={`flex flex-col ${
+                  layoutMode === 'editor'
+                    ? 'lg:col-span-12 max-w-4xl mx-auto w-full'
+                    : 'lg:col-span-6'
+                } ${mobileView === 'editor' ? 'block' : 'hidden lg:flex'}`}
+              >
+                <CvEditor
+                  cv={activeCv}
+                  onChange={handleUpdateCv}
+                  onOpenPhrases={() => setIsPhrasesOpen(true)}
+                  onOpenAi={() => setIsAiOpen(true)}
+                  onOpenTemplates={() => setIsTemplatesOpen(true)}
+                />
+              </div>
+            )}
+
+            {/* Right: Live Paper Preview */}
+            {(layoutMode === 'split' || layoutMode === 'preview') && (
+              <div
+                className={`flex flex-col ${
+                  layoutMode === 'preview'
+                    ? 'lg:col-span-12 max-w-5xl mx-auto w-full'
+                    : 'lg:col-span-6'
+                } ${mobileView === 'preview' ? 'block' : 'hidden lg:flex'}`}
+              >
+                <CvPreview
+                  cv={activeCv}
+                  onOpenTemplates={() => setIsTemplatesOpen(true)}
+                  onSwitchToEditor={() => setLayoutMode('editor')}
+                  onUpdateThemeColor={(color) => handleUpdateCv({ ...activeCv, themeColor: color })}
+                />
+              </div>
+            )}
+
+            {/* Hidden offscreen rendering when in editor-only mode for background PDF/Print generation */}
+            {layoutMode === 'editor' && (
+              <div className="fixed -left-[9999px] top-0 w-[794px] pointer-events-none opacity-0" aria-hidden="true">
+                <TemplateRenderer cv={activeCv} />
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Modals */}
+      <TemplatePickerModal
+        isOpen={isTemplatesOpen}
+        onClose={() => setIsTemplatesOpen(false)}
+        cv={activeCv}
+        onSelectTemplate={(templateId, themeColor) =>
+          handleUpdateCv({
+            ...activeCv,
+            templateId,
+            ...(themeColor ? { themeColor } : {})
+          })
+        }
+      />
+
+      <PhrasesLibraryModal
+        isOpen={isPhrasesOpen}
+        onClose={() => setIsPhrasesOpen(false)}
+        onInsertBullet={handleInsertBullet}
+        onInsertSummary={handleInsertSummary}
+        currentRole={activeCv.personalDetails.jobTitle}
+      />
+
+      <AiRefineModal
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
+        cv={activeCv}
+        settings={settings}
+        onUpdateSettings={setSettings}
+        onApplySummary={handleApplyAiSummary}
+        onApplyBullet={handleApplyAiBullet}
+      />
+
+      <CvDashboardModal
+        isOpen={isDashboardOpen}
+        onClose={() => setIsDashboardOpen(false)}
+        cvs={cvs}
+        activeCvId={activeCvId}
+        maxLimit={settings.maxCvLimit}
+        onSelectCv={handleSelectCv}
+        onCreateNew={handleCreateNew}
+        onDuplicateCv={(id) => handleDuplicate(id)}
+        onDeleteCv={handleDelete}
+        onCvImported={handleReloadCVs}
+        onOpenSettings={() => {
+          setIsDashboardOpen(false);
+          setIsSettingsOpen(true);
+        }}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onUpdateSettings={setSettings}
+        currentCvCount={cvs.length}
+        onReloadCVs={handleReloadCVs}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "modern-executive",
+    "name": "Modern Executive",
+    "category": "Modern",
+    "description": "Clean dual-column layout with bold header accents and organized experience cards. Ideal for mid to senior professionals.",
+    "recommendedFor": "Business, Managers, Executives & Consultants",
+    "badge": "Popular",
+    "defaultColor": "#2563eb",
+    "accentColors": ["#2563eb", "#0f766e", "#4338ca", "#b91c1c", "#1e293b", "#7c3aed"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "edinburgh-timeline",
+    "name": "Edinburgh Timeline",
+    "category": "Modern",
+    "description": "Unbroken vertical timeline rail with node bullets connecting all career milestones. Clean chronological flow.",
+    "recommendedFor": "Project Managers, Operations, Mid-Senior Tech, Healthcare & Finance",
+    "badge": "Timeline Rail",
+    "defaultColor": "#1e293b",
+    "accentColors": ["#1e293b", "#0284c7", "#059669", "#7c3aed", "#be123c", "#334155"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "cambridge-accent",
+    "name": "Cambridge Accent",
+    "category": "Creative",
+    "description": "Modern color accent header with monogram avatar initials, categorized skill chips, and clean card dividers.",
+    "recommendedFor": "Marketing, Product Management, Brand Strategy & Digital Media",
+    "badge": "Color Accent",
+    "defaultColor": "#0d9488",
+    "accentColors": ["#0d9488", "#4f46e5", "#ea580c", "#e11d48", "#2563eb", "#0f172a"],
+    "hasSidebar": false,
+    "supportsPhoto": true
+  },
+  {
+    "id": "minimalist-clean",
+    "name": "Minimalist Clean",
+    "category": "Minimalist",
+    "description": "Distraction-free typography-first design with high whitespace balance. Maximum ATS readability.",
+    "recommendedFor": "Software Engineers, Researchers, Designers & Startups",
+    "badge": "Top ATS Score",
+    "defaultColor": "#0f172a",
+    "accentColors": ["#0f172a", "#334155", "#0284c7", "#059669", "#d97706", "#475569"],
+    "hasSidebar": false,
+    "supportsPhoto": false
+  },
+  {
+    "id": "london-corporate",
+    "name": "London Corporate",
+    "category": "Corporate",
+    "description": "Traditional UK executive format inspired by top recruitment agencies. Polished header banner with crisp dividers.",
+    "recommendedFor": "Finance, Legal, Banking, Corporate & Public Sector",
+    "badge": "UK Standard",
+    "defaultColor": "#1e3a8a",
+    "accentColors": ["#1e3a8a", "#14532d", "#701a75", "#831843", "#312e81", "#18181b"],
+    "hasSidebar": false,
+    "supportsPhoto": true
+  },
+  {
+    "id": "creative-split",
+    "name": "Creative Split",
+    "category": "Creative",
+    "description": "Striking split-tone sidebar highlighting core skills and contact info, giving experience front-and-center focus.",
+    "recommendedFor": "Marketing, Creative Directors, Media & Product Designers",
+    "badge": "Designers' Choice",
+    "defaultColor": "#4f46e5",
+    "accentColors": ["#4f46e5", "#0d9488", "#e11d48", "#ea580c", "#8b5cf6", "#0284c7"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "tech-compact",
+    "name": "Tech Compact",
+    "category": "Tech",
+    "description": "High-density technical resume layout with skill chips, GitHub/live links, and bullet metrics.",
+    "recommendedFor": "Full Stack, DevOps, Data Scientists & Engineers",
+    "badge": "Developer",
+    "defaultColor": "#0284c7",
+    "accentColors": ["#0284c7", "#10b981", "#6366f1", "#f59e0b", "#64748b", "#06b6d4"],
+    "hasSidebar": false,
+    "supportsPhoto": false
+  },
+  {
+    "id": "academic-classic",
+    "name": "Academic Classic",
+    "category": "Academic",
+    "description": "Prestigious serif typography with formal centered titles. Ideal for academia, medical, and publishing careers.",
+    "recommendedFor": "Academics, Healthcare, PhDs, Educators & Historians",
+    "badge": "Traditional",
+    "defaultColor": "#3f3f46",
+    "accentColors": ["#3f3f46", "#1c1917", "#1e3a8a", "#064e3b", "#7c2d12", "#4c1d95"],
+    "hasSidebar": false,
+    "supportsPhoto": false
+  }
+]
