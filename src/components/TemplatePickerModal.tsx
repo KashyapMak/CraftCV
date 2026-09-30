@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CVData, TemplateConfig } from '../types/cv';
 import { TEMPLATES, COLOR_PRESETS } from '../templates/templatesRegistry';
 import { TemplateRenderer } from '../templates/TemplateRenderer';
+import { ALEXANDER_WRIGHT_SAMPLE_CV, isCvEmpty } from '../data/sampleCV';
 import {
   X,
   Check,
@@ -13,7 +14,9 @@ import {
   ZoomOut,
   Maximize2,
   FileText,
-  Palette
+  Palette,
+  User,
+  Info
 } from 'lucide-react';
 
 interface Props {
@@ -21,13 +24,15 @@ interface Props {
   onClose: () => void;
   cv: CVData;
   onSelectTemplate: (templateId: string, themeColor?: string) => void;
+  onLoadSampleProfile?: () => void;
 }
 
 export const TemplatePickerModal: React.FC<Props> = ({
   isOpen,
   onClose,
   cv,
-  onSelectTemplate
+  onSelectTemplate,
+  onLoadSampleProfile
 }) => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(cv.templateId || 'modern-executive');
   const currentTmpl = TEMPLATES.find((t) => t.id === selectedTemplateId) || TEMPLATES[0];
@@ -42,14 +47,21 @@ export const TemplatePickerModal: React.FC<Props> = ({
   const previewMeasureRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
+  // Check whether user has entered/selected their own CV details
+  const userHasCvData = !isCvEmpty(cv);
+  // Default to sample if user has not yet entered their CV
+  const [previewSource, setPreviewSource] = useState<'sample' | 'myCv'>('sample');
+
   // Sync state when modal opens or cv changes
   useEffect(() => {
     if (isOpen) {
       setSelectedTemplateId(cv.templateId || 'modern-executive');
       const tmpl = TEMPLATES.find((t) => t.id === (cv.templateId || 'modern-executive')) || TEMPLATES[0];
       setSelectedThemeColor(cv.themeColor || tmpl.defaultColor || '#2563eb');
+      // If user has not selected or used their CV, use Alexander Wright sample profile
+      setPreviewSource(userHasCvData ? 'myCv' : 'sample');
     }
-  }, [isOpen, cv.templateId, cv.themeColor]);
+  }, [isOpen, cv.templateId, cv.themeColor, userHasCvData]);
 
   const categories = ['All', 'Modern', 'Corporate', 'Minimalist', 'Creative', 'Tech', 'Academic'];
 
@@ -57,9 +69,12 @@ export const TemplatePickerModal: React.FC<Props> = ({
     ? TEMPLATES
     : TEMPLATES.filter((t) => t.category === selectedCategory);
 
+  const isUsingSample = previewSource === 'sample' || !userHasCvData;
+  const baseProfileCv = isUsingSample ? ALEXANDER_WRIGHT_SAMPLE_CV : cv;
+
   // Preview CV state with selected template and selected theme color
   const previewCv: CVData = {
-    ...cv,
+    ...baseProfileCv,
     templateId: selectedTemplateId,
     themeColor: selectedThemeColor
   };
@@ -78,7 +93,7 @@ export const TemplatePickerModal: React.FC<Props> = ({
     calculatePages();
     const timer = setTimeout(calculatePages, 150);
     return () => clearTimeout(timer);
-  }, [selectedTemplateId, selectedThemeColor, cv]);
+  }, [selectedTemplateId, selectedThemeColor, cv, isUsingSample]);
 
   // Auto-fit zoom on mount or resize
   useEffect(() => {
@@ -317,9 +332,9 @@ export const TemplatePickerModal: React.FC<Props> = ({
 
         {/* ================= BOTTOM SECTION: FULL-WIDTH LIVE PREVIEW ================= */}
         <div className="flex-1 flex flex-col overflow-hidden bg-slate-200/70">
-          {/* Preview Toolbar with Interactive Theme Color Selector */}
+          {/* Preview Toolbar with Interactive Theme Color Selector & Profile Switcher */}
           <div className="px-6 py-2 bg-white/95 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-slate-700 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                 Previewing:
@@ -330,6 +345,52 @@ export const TemplatePickerModal: React.FC<Props> = ({
               <span className="text-slate-400 text-[11px] hidden md:inline">
                 · {totalPages} {totalPages === 1 ? 'Page' : 'Pages'} Standard A4
               </span>
+
+              {/* Alexander Wright Sample Profile vs My CV Switcher */}
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 ml-1">
+                <button
+                  type="button"
+                  onClick={() => setPreviewSource('sample')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    isUsingSample
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                  title="Preview all templates with Alexander Wright's complete sample JSON profile"
+                >
+                  <User className="w-3 h-3" />
+                  <span>Alexander Wright (Sample)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (userHasCvData) setPreviewSource('myCv');
+                  }}
+                  disabled={!userHasCvData}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    !isUsingSample
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : !userHasCvData
+                      ? 'text-slate-400 opacity-60 cursor-not-allowed'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                  title={
+                    userHasCvData
+                      ? 'Preview template with your entered CV details'
+                      : 'Your CV is empty. Populate your info in the editor to preview with your CV.'
+                  }
+                >
+                  <FileText className="w-3 h-3" />
+                  <span>My CV {!userHasCvData ? '(Empty)' : ''}</span>
+                </button>
+              </div>
+
+              {!userHasCvData && (
+                <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                  <Info className="w-3 h-3 text-indigo-600 shrink-0" />
+                  <span>Auto-previewing Alexander Wright sample JSON profile</span>
+                </span>
+              )}
             </div>
 
             {/* Interactive Theme Color Palette Bar */}

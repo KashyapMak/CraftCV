@@ -1,6 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
-import { Mail, Phone, MapPin, Globe, Linkedin, Github, Sparkles } from 'lucide-react';
+import { getSectionTitle } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -74,7 +74,7 @@ export const CambridgeAccentTemplate: React.FC<Props> = ({ cv }) => {
           <section className="break-inside-avoid">
             <h2 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: theme }}>
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: theme }} />
-              Professional Overview
+              {getSectionTitle(cv, 'summary', 'Professional Overview')}
             </h2>
             <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-100 text-[11px] text-slate-700 leading-relaxed text-justify">
               {cv.summary}
@@ -87,9 +87,9 @@ export const CambridgeAccentTemplate: React.FC<Props> = ({ cv }) => {
           <section className="break-inside-avoid">
             <h2 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: theme }}>
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: theme }} />
-              Core Competencies & Tools
+              {getSectionTitle(cv, 'skills', 'Core Competencies & Tools')}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
               {cv.skills.map((cat) => (
                 <div key={cat.id} className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
                   <div className="text-[11px] font-bold text-slate-800 mb-1.5">
@@ -117,7 +117,7 @@ export const CambridgeAccentTemplate: React.FC<Props> = ({ cv }) => {
           <section>
             <h2 className="text-xs font-black uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: theme }}>
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: theme }} />
-              Experience & Career History
+              {getSectionTitle(cv, 'experience', 'Experience & Career History')}
             </h2>
             <div className="space-y-4">
               {cv.experiences.map((exp) => (
@@ -164,9 +164,9 @@ export const CambridgeAccentTemplate: React.FC<Props> = ({ cv }) => {
           <section className="break-inside-avoid">
             <h2 className="text-xs font-black uppercase tracking-wider mb-2.5 flex items-center gap-1.5" style={{ color: theme }}>
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: theme }} />
-              Education & Academic Background
+              {getSectionTitle(cv, 'education', 'Education & Academic Background')}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {cv.educations.map((edu) => (
                 <div key={edu.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <div className="font-bold text-xs text-slate-900">
@@ -185,12 +185,72 @@ export const CambridgeAccentTemplate: React.FC<Props> = ({ cv }) => {
           </section>
         )}
 
+        {/* Key Projects */}
+        {cv.projects && cv.projects.length > 0 && (
+          <section className="break-inside-avoid">
+            <h2 className="text-xs font-black uppercase tracking-wider mb-2.5 flex items-center gap-1.5" style={{ color: theme }}>
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: theme }} />
+              {getSectionTitle(cv, 'projects', 'Key Projects & Work')}
+            </h2>
+            <div className="space-y-2.5">
+              {cv.projects.map((proj) => (
+                <div key={proj.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex justify-between items-baseline font-bold text-xs text-slate-900">
+                    <span>{proj.title}</span>
+                    {proj.startDate && (
+                      <span className="font-normal text-slate-500 text-[10px]">
+                        {proj.startDate} {proj.endDate ? `– ${proj.endDate}` : ''}
+                      </span>
+                    )}
+                  </div>
+                  {proj.subtitle && <div className="text-[11px] text-slate-600 font-medium">{proj.subtitle}</div>}
+                  {proj.link && <div className="text-[10px] text-indigo-600 font-medium">{proj.link}</div>}
+                  {proj.description && (
+                    <p className="mt-1 text-[11px] text-slate-700 leading-relaxed whitespace-pre-line">
+                      {proj.description}
+                    </p>
+                  )}
+                  {proj.highlights && proj.highlights.length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5 text-[11px] text-slate-600">
+                      {proj.highlights.map((h, i) => (
+                        <li key={i}>• {h}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Custom Sections */}
+        {cv.customSections && cv.customSections.map((sec) => (
+          <section key={sec.id} className="break-inside-avoid">
+            <h2 className="text-xs font-black uppercase tracking-wider mb-2.5 flex items-center gap-1.5" style={{ color: theme }}>
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: theme }} />
+              {sec.sectionTitle}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {sec.items.map((item) => (
+                <div key={item.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex justify-between items-baseline font-bold text-xs text-slate-900">
+                    <span>{item.title}</span>
+                    {item.date && <span className="font-normal text-slate-500 text-[10px]">{item.date}</span>}
+                  </div>
+                  {item.subtitle && <div className="text-[11px] text-slate-600 italic mt-0.5">{item.subtitle}</div>}
+                  {item.description && <p className="mt-1 text-[11px] text-slate-700 leading-relaxed">{item.description}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+
         {/* Certifications & Languages Bottom Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {cv.certifications && cv.certifications.length > 0 && (
             <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs break-inside-avoid">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-2 border-b border-slate-100 pb-1">
-                Certifications
+                {getSectionTitle(cv, 'certifications', 'Certifications')}
               </h3>
               <div className="space-y-1.5">
                 {cv.certifications.map((c) => (
@@ -206,7 +266,7 @@ export const CambridgeAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.languages && cv.languages.length > 0 && (
             <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs break-inside-avoid">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-2 border-b border-slate-100 pb-1">
-                Languages
+                {getSectionTitle(cv, 'languages', 'Languages')}
               </h3>
               <div className="flex flex-wrap gap-2 text-[10px]">
                 {cv.languages.map((l) => (

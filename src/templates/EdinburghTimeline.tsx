@@ -1,6 +1,7 @@
 import React from 'react';
 import { CVData } from '../types/cv';
-import { Mail, Phone, MapPin, Globe, Linkedin, Github, Award, Briefcase, GraduationCap, CheckCircle } from 'lucide-react';
+import { getSectionTitle } from '../utils/sectionTitles';
+import { Mail, Phone, MapPin, Globe, Linkedin, Github, Award, Briefcase, GraduationCap, FolderPlus } from 'lucide-react';
 
 interface Props {
   cv: CVData;
@@ -81,7 +82,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
 
       {/* Two Column Layout: Left Details Rail & Right Main Timeline */}
       <div className="grid grid-cols-12 gap-7">
-        {/* Left Sidebar (Core Skills, Certifications, Languages) */}
+        {/* Left Sidebar (Core Skills, Certifications, Languages, Custom Sections) */}
         <div className="col-span-4 space-y-6">
           {/* Professional Summary */}
           {cv.summary && (
@@ -90,7 +91,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-black uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: theme, borderColor: theme }}
               >
-                Executive Profile
+                {getSectionTitle(cv, 'summary', 'Executive Profile')}
               </h2>
               <p className="text-[11px] text-slate-700 leading-relaxed text-justify">
                 {cv.summary}
@@ -105,7 +106,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-black uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: theme, borderColor: theme }}
               >
-                Key Competencies
+                {getSectionTitle(cv, 'skills', 'Key Competencies')}
               </h2>
               <div className="space-y-3">
                 {cv.skills.map((cat) => (
@@ -137,7 +138,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 style={{ color: theme, borderColor: theme }}
               >
                 <Award className="w-3.5 h-3.5" />
-                <span>Certifications</span>
+                <span>{getSectionTitle(cv, 'certifications', 'Certifications')}</span>
               </h2>
               <div className="space-y-2">
                 {cv.certifications.map((cert) => (
@@ -159,7 +160,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-black uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: theme, borderColor: theme }}
               >
-                Languages
+                {getSectionTitle(cv, 'languages', 'Languages')}
               </h2>
               <div className="space-y-1.5 text-[11px]">
                 {cv.languages.map((l) => (
@@ -171,6 +172,29 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
               </div>
             </section>
           )}
+
+          {/* Custom Sections (in left sidebar if present) */}
+          {cv.customSections && cv.customSections.map((sec) => (
+            <section key={sec.id} className="break-inside-avoid">
+              <h2
+                className="text-xs font-black uppercase tracking-wider pb-1 mb-2 border-b flex items-center gap-1.5"
+                style={{ color: theme, borderColor: theme }}
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+                <span>{sec.sectionTitle}</span>
+              </h2>
+              <div className="space-y-2">
+                {sec.items.map((item) => (
+                  <div key={item.id} className="text-[11px] bg-slate-50 p-2 rounded border border-slate-200">
+                    <div className="font-bold text-slate-900">{item.title}</div>
+                    {item.subtitle && <div className="text-slate-500 text-[10px] italic">{item.subtitle}</div>}
+                    {item.date && <div className="text-slate-400 text-[10px]">{item.date}</div>}
+                    {item.description && <p className="text-slate-600 text-[10px] mt-0.5">{item.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
 
         {/* Right Main Rail: Vertical Timeline for Experience & Education */}
@@ -183,7 +207,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 style={{ color: theme, borderColor: theme }}
               >
                 <Briefcase className="w-3.5 h-3.5" />
-                <span>Work History & Timeline</span>
+                <span>{getSectionTitle(cv, 'experience', 'Work History & Timeline')}</span>
               </h2>
 
               <div className="relative pl-5 border-l-2 space-y-5" style={{ borderColor: `${theme}40` }}>
@@ -235,7 +259,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 style={{ color: theme, borderColor: theme }}
               >
                 <GraduationCap className="w-3.5 h-3.5" />
-                <span>Education & Qualifications</span>
+                <span>{getSectionTitle(cv, 'education', 'Education & Qualifications')}</span>
               </h2>
 
               <div className="relative pl-5 border-l-2 space-y-4" style={{ borderColor: `${theme}40` }}>
@@ -276,7 +300,7 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-black uppercase tracking-wider pb-1 mb-3 border-b"
                 style={{ color: theme, borderColor: theme }}
               >
-                Notable Key Projects
+                {getSectionTitle(cv, 'projects', 'Notable Key Projects')}
               </h2>
               <div className="space-y-3">
                 {cv.projects.map((proj) => (
@@ -285,6 +309,12 @@ export const EdinburghTimelineTemplate: React.FC<Props> = ({ cv }) => {
                       <span className="font-bold text-slate-900 text-[11px]">{proj.title}</span>
                       {proj.subtitle && <span className="text-[10px] text-slate-500">{proj.subtitle}</span>}
                     </div>
+                    {proj.link && <div className="text-indigo-600 text-[10px] font-medium mt-0.5">{proj.link}</div>}
+                    {proj.description && (
+                      <p className="mt-1 text-[11px] text-slate-600 leading-relaxed whitespace-pre-line">
+                        {proj.description}
+                      </p>
+                    )}
                     {proj.highlights && proj.highlights.length > 0 && (
                       <ul className="mt-1 space-y-0.5 text-[10px] text-slate-600">
                         {proj.highlights.map((h, i) => (

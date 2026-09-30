@@ -8,6 +8,8 @@ import {
   CertificationItem,
   LanguageItem,
   CustomSection,
+  CustomSectionItem,
+  SectionTitles,
   FontFamilyType,
   FontSizeType,
   SpacingType
@@ -30,8 +32,15 @@ import {
   Award,
   Globe,
   PlusCircle,
-  Wand2
+  Wand2,
+  FolderPlus,
+  RotateCcw,
+  Type,
+  ListPlus
 } from 'lucide-react';
+import { isCvEmpty } from '../data/sampleCV';
+import { SectionTitleField } from './SectionTitleField';
+import { DEFAULT_SECTION_TITLES } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -39,6 +48,7 @@ interface Props {
   onOpenPhrases: () => void;
   onOpenAi: () => void;
   onOpenTemplates: () => void;
+  onLoadSample?: () => void;
 }
 
 type EditorTab = 'personal' | 'summary' | 'experience' | 'education' | 'skills' | 'extras' | 'design';
@@ -48,7 +58,8 @@ export const CvEditor: React.FC<Props> = ({
   onChange,
   onOpenPhrases,
   onOpenAi,
-  onOpenTemplates
+  onOpenTemplates,
+  onLoadSample
 }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>('personal');
   const [newSkillInputs, setNewSkillInputs] = useState<Record<string, string>>({});
@@ -64,18 +75,43 @@ export const CvEditor: React.FC<Props> = ({
     });
   };
 
+  // Section Titles updater
+  const handleUpdateSectionTitle = (sectionKey: keyof SectionTitles, title: string) => {
+    updateCv({
+      sectionTitles: {
+        ...(cv.sectionTitles || {}),
+        [sectionKey]: title
+      }
+    });
+  };
+
   // Work experience helpers
-  const handleAddExperience = () => {
-    const newItem: ExperienceItem = {
-      id: `exp_${Date.now()}`,
-      jobTitle: '',
-      employer: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      isCurrent: true,
-      highlights: ['']
-    };
+  const handleAddExperience = (withSample = false) => {
+    const now = Date.now();
+    const newItem: ExperienceItem = withSample
+      ? {
+          id: `exp_${now}`,
+          jobTitle: 'Senior Software Engineer / Technical Lead',
+          employer: 'Enterprise Tech Solutions',
+          location: 'London, UK (Hybrid)',
+          startDate: '2022',
+          endDate: 'Present',
+          isCurrent: true,
+          highlights: [
+            'Architected and deployed high-throughput cloud microservices handling 2M+ daily active transactions.',
+            'Spearheaded transition to modern CI/CD pipelines, slashing release turnaround from 2 days to under 15 minutes.'
+          ]
+        }
+      : {
+          id: `exp_${now}`,
+          jobTitle: '',
+          employer: '',
+          location: '',
+          startDate: '',
+          endDate: '',
+          isCurrent: true,
+          highlights: ['']
+        };
     updateCv({ experiences: [newItem, ...cv.experiences] });
   };
 
@@ -110,18 +146,34 @@ export const CvEditor: React.FC<Props> = ({
   };
 
   // Education helpers
-  const handleAddEducation = () => {
-    const newItem: EducationItem = {
-      id: `edu_${Date.now()}`,
-      school: '',
-      degree: '',
-      fieldOfStudy: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      isCurrent: false,
-      details: []
-    };
+  const handleAddEducation = (withSample = false) => {
+    const now = Date.now();
+    const newItem: EducationItem = withSample
+      ? {
+          id: `edu_${now}`,
+          school: 'University of London',
+          degree: 'B.Sc. (Hons)',
+          fieldOfStudy: 'Computer Science & Software Engineering',
+          location: 'London, UK',
+          startDate: '2018',
+          endDate: '2021',
+          isCurrent: false,
+          grade: 'First Class Honours',
+          details: [
+            'Graduated in top 5% of class; focused on Distributed Systems & Algorithms.'
+          ]
+        }
+      : {
+          id: `edu_${now}`,
+          school: '',
+          degree: '',
+          fieldOfStudy: '',
+          location: '',
+          startDate: '',
+          endDate: '',
+          isCurrent: false,
+          details: []
+        };
     updateCv({ educations: [...cv.educations, newItem] });
   };
 
@@ -137,12 +189,19 @@ export const CvEditor: React.FC<Props> = ({
   };
 
   // Skills helpers
-  const handleAddSkillCategory = () => {
-    const newCat: SkillCategory = {
-      id: `cat_${Date.now()}`,
-      category: 'Specialized Skills',
-      items: []
-    };
+  const handleAddSkillCategory = (withSample = false) => {
+    const now = Date.now();
+    const newCat: SkillCategory = withSample
+      ? {
+          id: `cat_${now}`,
+          category: 'Core Competencies & Tools',
+          items: ['System Architecture', 'TypeScript / React', 'API Engineering', 'Cloud Platforms']
+        }
+      : {
+          id: `cat_${now}`,
+          category: 'Specialized Skills',
+          items: []
+        };
     updateCv({ skills: [...cv.skills, newCat] });
   };
 
@@ -181,16 +240,32 @@ export const CvEditor: React.FC<Props> = ({
   };
 
   // Projects helpers
-  const handleAddProject = () => {
-    const newProj: ProjectItem = {
-      id: `proj_${Date.now()}`,
-      title: '',
-      subtitle: '',
-      link: '',
-      startDate: '',
-      endDate: '',
-      highlights: ['']
-    };
+  const handleAddProject = (withSample = false) => {
+    const now = Date.now();
+    const newProj: ProjectItem = withSample
+      ? {
+          id: `proj_${now}`,
+          title: 'High-Impact Web Platform',
+          subtitle: 'React, TypeScript, Cloud Architecture',
+          link: 'https://github.com/example/platform',
+          startDate: '2023',
+          endDate: 'Present',
+          description: 'Designed and deployed an enterprise analytics dashboard with real-time streaming charts and sub-second metrics.',
+          highlights: [
+            'Scaled concurrent capacity to 50,000 requests/sec with 99.99% uptime.',
+            'Integrated modern component library reducing frontend delivery cycles by 30%.'
+          ]
+        }
+      : {
+          id: `proj_${now}`,
+          title: '',
+          subtitle: '',
+          link: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: []
+        };
     updateCv({ projects: [...(cv.projects || []), newProj] });
   };
 
@@ -205,14 +280,52 @@ export const CvEditor: React.FC<Props> = ({
     updateCv({ projects: list });
   };
 
+  const handleAddProjectHighlight = (pIdx: number) => {
+    const list = [...(cv.projects || [])];
+    const project = list[pIdx];
+    if (project) {
+      project.highlights = [...(project.highlights || []), ''];
+      updateCv({ projects: list });
+    }
+  };
+
+  const handleUpdateProjectHighlight = (pIdx: number, hlIdx: number, text: string) => {
+    const list = [...(cv.projects || [])];
+    const project = list[pIdx];
+    if (project && project.highlights) {
+      const hls = [...project.highlights];
+      hls[hlIdx] = text;
+      project.highlights = hls;
+      updateCv({ projects: list });
+    }
+  };
+
+  const handleDeleteProjectHighlight = (pIdx: number, hlIdx: number) => {
+    const list = [...(cv.projects || [])];
+    const project = list[pIdx];
+    if (project && project.highlights) {
+      project.highlights = project.highlights.filter((_, i) => i !== hlIdx);
+      updateCv({ projects: list });
+    }
+  };
+
   // Certifications helpers
-  const handleAddCert = () => {
-    const newCert: CertificationItem = {
-      id: `cert_${Date.now()}`,
-      name: '',
-      issuer: '',
-      issueDate: ''
-    };
+  const handleAddCert = (withSample = false) => {
+    const now = Date.now();
+    const newCert: CertificationItem = withSample
+      ? {
+          id: `cert_${now}`,
+          name: 'AWS Certified Solutions Architect – Associate',
+          issuer: 'Amazon Web Services',
+          issueDate: '2024',
+          credentialUrl: 'https://aws.amazon.com/verification'
+        }
+      : {
+          id: `cert_${now}`,
+          name: '',
+          issuer: '',
+          issueDate: ''
+        };
     updateCv({ certifications: [...(cv.certifications || []), newCert] });
   };
 
@@ -228,12 +341,19 @@ export const CvEditor: React.FC<Props> = ({
   };
 
   // Languages helpers
-  const handleAddLanguage = () => {
-    const newLang: LanguageItem = {
-      id: `lang_${Date.now()}`,
-      language: '',
-      proficiency: 'Fluent'
-    };
+  const handleAddLanguage = (withSample = false) => {
+    const now = Date.now();
+    const newLang: LanguageItem = withSample
+      ? {
+          id: `lang_${now}`,
+          language: 'Spanish',
+          proficiency: 'Fluent'
+        }
+      : {
+          id: `lang_${now}`,
+          language: '',
+          proficiency: 'Fluent'
+        };
     updateCv({ languages: [...(cv.languages || []), newLang] });
   };
 
@@ -246,6 +366,96 @@ export const CvEditor: React.FC<Props> = ({
   const handleDeleteLanguage = (index: number) => {
     const list = (cv.languages || []).filter((_, i) => i !== index);
     updateCv({ languages: list });
+  };
+
+  // Custom Sections helpers
+  const handleAddCustomSection = (withSample = true, customTitle?: string) => {
+    const now = Date.now();
+    const title = customTitle || 'Key Achievements & Awards';
+    const newSection: CustomSection = {
+      id: `custom_${now}_${Math.random().toString(36).substring(2, 6)}`,
+      sectionTitle: title,
+      items: withSample
+        ? [
+            {
+              id: `item_${now}_1`,
+              title: title.includes('Award') ? 'Engineering Excellence Award' : title.includes('Publication') ? 'Research Paper / Case Study Publication' : 'Notable Project Milestone / Recognition',
+              subtitle: 'Apex Global Technology Summit',
+              date: '2024',
+              description: 'Recognized for lowest latency routing architecture and cross-team execution delivering 40% performance gains.'
+            }
+          ]
+        : [
+            {
+              id: `item_${now}_1`,
+              title: '',
+              subtitle: '',
+              date: '',
+              description: ''
+            }
+          ]
+    };
+    updateCv({ customSections: [...(cv.customSections || []), newSection] });
+  };
+
+  const handleUpdateCustomSectionTitle = (secIndex: number, title: string) => {
+    const list = [...(cv.customSections || [])];
+    if (list[secIndex]) {
+      list[secIndex] = { ...list[secIndex], sectionTitle: title };
+      updateCv({ customSections: list });
+    }
+  };
+
+  const handleDeleteCustomSection = (secIndex: number) => {
+    const list = (cv.customSections || []).filter((_, i) => i !== secIndex);
+    updateCv({ customSections: list });
+  };
+
+  const handleAddCustomSectionItem = (secIndex: number, withSample = false) => {
+    const list = [...(cv.customSections || [])];
+    const sec = list[secIndex];
+    if (sec) {
+      const now = Date.now();
+      const newItem: CustomSectionItem = withSample
+        ? {
+            id: `item_${now}`,
+            title: 'Key Recognition / Achievement / Project',
+            subtitle: 'Issuing Institution / Organization',
+            date: '2024',
+            description: 'Quantifiable milestone, award criteria, or notable contribution.'
+          }
+        : {
+            id: `item_${now}`,
+            title: '',
+            subtitle: '',
+            date: '',
+            description: ''
+          };
+      sec.items = [...(sec.items || []), newItem];
+      updateCv({ customSections: list });
+    }
+  };
+
+  const handleUpdateCustomSectionItem = (
+    secIndex: number,
+    itemIndex: number,
+    patch: Partial<CustomSectionItem>
+  ) => {
+    const list = [...(cv.customSections || [])];
+    const sec = list[secIndex];
+    if (sec && sec.items[itemIndex]) {
+      sec.items[itemIndex] = { ...sec.items[itemIndex], ...patch };
+      updateCv({ customSections: list });
+    }
+  };
+
+  const handleDeleteCustomSectionItem = (secIndex: number, itemIndex: number) => {
+    const list = [...(cv.customSections || [])];
+    const sec = list[secIndex];
+    if (sec && sec.items) {
+      sec.items = sec.items.filter((_, i) => i !== itemIndex);
+      updateCv({ customSections: list });
+    }
   };
 
   // Handle Photo upload
@@ -351,6 +561,28 @@ export const CvEditor: React.FC<Props> = ({
           <span>Theme & Style</span>
         </button>
       </div>
+
+      {/* Starting from Scratch / Sample Profile Notice */}
+      {isCvEmpty(cv) && (
+        <div className="bg-indigo-50/70 border-b border-indigo-100 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+            <span className="text-slate-700">
+              Starting a blank CV. All templates are currently previewing with <strong>Alexander Wright's sample JSON profile</strong>.
+            </span>
+          </div>
+          {onLoadSample && (
+            <button
+              type="button"
+              onClick={onLoadSample}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+              title="Populate your CV with Alexander Wright's complete profile"
+            >
+              <span>Load Alexander Wright to Edit</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Editor Content Area */}
       <div className="flex-1 p-5 sm:p-6 overflow-y-auto">
@@ -561,6 +793,14 @@ export const CvEditor: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Section Heading Customization */}
+            <SectionTitleField
+              sectionKey="summary"
+              currentTitle={cv.sectionTitles?.summary}
+              onChangeTitle={(title) => handleUpdateSectionTitle('summary', title)}
+              compact
+            />
+
             <div className="relative">
               <textarea
                 rows={6}
@@ -580,7 +820,7 @@ export const CvEditor: React.FC<Props> = ({
             <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-start gap-2.5 text-xs text-indigo-900">
               <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold">MyPerfectCV Tip:</span> Avoid buzzwords like "hard worker" or "guru". Instead, state your key specialty, total years in the field, and a measurable highlight (e.g. "scaled revenue by 40%").
+                <span className="font-bold">Expert CV Tip:</span> Avoid buzzwords like "hard worker" or "guru". Instead, state your key specialty, total years in the field, and a measurable highlight (e.g. "scaled revenue by 40%").
               </div>
             </div>
 
@@ -606,7 +846,7 @@ export const CvEditor: React.FC<Props> = ({
         {/* ================= TAB 3: WORK EXPERIENCE ================= */}
         {activeTab === 'experience' && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Employment History</h3>
                 <p className="text-xs text-slate-500">
@@ -625,7 +865,7 @@ export const CvEditor: React.FC<Props> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={handleAddExperience}
+                  onClick={() => handleAddExperience(false)}
                   className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -634,11 +874,39 @@ export const CvEditor: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Section Heading Customization */}
+            <SectionTitleField
+              sectionKey="experience"
+              currentTitle={cv.sectionTitles?.experience}
+              onChangeTitle={(title) => handleUpdateSectionTitle('experience', title)}
+              compact
+            />
+
             {cv.experiences.length === 0 ? (
-              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-                <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-700">No work experience added yet</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Click "Add Role" above to add your first position</p>
+              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 space-y-3">
+                <Briefcase className="w-8 h-8 text-slate-300 mx-auto" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">No work experience added yet</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Start fresh or insert a structured sample role to see the recommended format</p>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAddExperience(false)}
+                    className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Blank Role</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddExperience(true)}
+                    className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Insert Sample Role Structure</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -812,14 +1080,14 @@ export const CvEditor: React.FC<Props> = ({
         {/* ================= TAB 4: EDUCATION ================= */}
         {activeTab === 'education' && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Education & Academic Background</h3>
                 <p className="text-xs text-slate-500">Degrees, colleges, universities, or training courses.</p>
               </div>
               <button
                 type="button"
-                onClick={handleAddEducation}
+                onClick={() => handleAddEducation(false)}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -827,11 +1095,39 @@ export const CvEditor: React.FC<Props> = ({
               </button>
             </div>
 
+            {/* Section Heading Customization */}
+            <SectionTitleField
+              sectionKey="education"
+              currentTitle={cv.sectionTitles?.education}
+              onChangeTitle={(title) => handleUpdateSectionTitle('education', title)}
+              compact
+            />
+
             {cv.educations.length === 0 ? (
-              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-                <GraduationCap className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-700">No education entries yet</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Click "Add Education" to list your qualifications</p>
+              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 space-y-3">
+                <GraduationCap className="w-8 h-8 text-slate-300 mx-auto" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">No education entries yet</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">List your university degrees, colleges, diplomas, or academic qualifications</p>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAddEducation(false)}
+                    className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Blank Education</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddEducation(true)}
+                    className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Insert Sample Education Structure</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -979,14 +1275,14 @@ export const CvEditor: React.FC<Props> = ({
         {/* ================= TAB 5: SKILLS ================= */}
         {activeTab === 'skills' && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Core Skills & Competencies</h3>
                 <p className="text-xs text-slate-500">Group your skills into categories (e.g. Frameworks, Tools, Soft Skills).</p>
               </div>
               <button
                 type="button"
-                onClick={handleAddSkillCategory}
+                onClick={() => handleAddSkillCategory(false)}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -994,53 +1290,88 @@ export const CvEditor: React.FC<Props> = ({
               </button>
             </div>
 
-            <div className="space-y-4">
-              {cv.skills.map((cat, catIdx) => (
-                <div
-                  key={cat.id}
-                  className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <input
-                      type="text"
-                      value={cat.category}
-                      onChange={(e) => handleUpdateSkillCategoryName(catIdx, e.target.value)}
-                      placeholder="Category Name (e.g. Technical Skills)"
-                      className="font-bold text-xs text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 focus:outline-hidden pb-0.5"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSkillCategory(catIdx)}
-                      className="text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer"
-                      title="Delete category"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+            {/* Section Heading Customization */}
+            <SectionTitleField
+              sectionKey="skills"
+              currentTitle={cv.sectionTitles?.skills}
+              onChangeTitle={(title) => handleUpdateSectionTitle('skills', title)}
+              compact
+            />
 
-                  {/* Skill Badges */}
-                  <div className="flex flex-wrap gap-1.5 min-h-[32px] p-2 bg-white rounded-lg border border-slate-200">
-                    {cat.items.map((skill, sIdx) => (
-                      <span
-                        key={sIdx}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-800 rounded-md text-xs font-medium border border-indigo-100"
+            {cv.skills.length === 0 ? (
+              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 space-y-3">
+                <Sparkles className="w-8 h-8 text-slate-300 mx-auto" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">No skill categories added yet</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Group technical proficiencies, tools, or domain competencies</p>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAddSkillCategory(false)}
+                    className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Blank Category</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSkillCategory(true)}
+                    className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Insert Sample Skills Structure</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {cv.skills.map((cat, catIdx) => (
+                  <div
+                    key={cat.id}
+                    className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <input
+                        type="text"
+                        value={cat.category}
+                        onChange={(e) => handleUpdateSkillCategoryName(catIdx, e.target.value)}
+                        placeholder="Category Name (e.g. Technical Skills)"
+                        className="font-bold text-xs text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 focus:outline-hidden pb-0.5"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSkillCategory(catIdx)}
+                        className="text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer"
+                        title="Delete category"
                       >
-                        {skill}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSkillTag(catIdx, sIdx)}
-                          className="text-indigo-400 hover:text-rose-600 ml-0.5 cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                    {cat.items.length === 0 && (
-                      <span className="text-xs text-slate-400 italic">No skills added yet. Type below and press Enter.</span>
-                    )}
-                  </div>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
 
-                  {/* Add skill tag input */}
+                    {/* Skill Badges */}
+                    <div className="flex flex-wrap gap-1.5 min-h-[32px] p-2 bg-white rounded-lg border border-slate-200">
+                      {cat.items.map((skill, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-800 rounded-md text-xs font-medium border border-indigo-100"
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkillTag(catIdx, sIdx)}
+                            className="text-indigo-400 hover:text-rose-600 ml-0.5 cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      {cat.items.length === 0 && (
+                        <span className="text-xs text-slate-400 italic">No skills added yet. Type below and press Enter.</span>
+                      )}
+                    </div>
+
+                    {/* Add skill tag input */}
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
@@ -1091,7 +1422,7 @@ export const CvEditor: React.FC<Props> = ({
           <div className="space-y-6">
             {/* Projects */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                     Key Projects & Portfolio
@@ -1100,55 +1431,148 @@ export const CvEditor: React.FC<Props> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleAddProject}
+                  onClick={() => handleAddProject(false)}
                   className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" /> Add Project
                 </button>
               </div>
 
-              {cv.projects?.map((proj, pIdx) => (
-                <div key={proj.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Project #{pIdx + 1}</span>
+              {/* Section Heading Customization */}
+              <SectionTitleField
+                sectionKey="projects"
+                currentTitle={cv.sectionTitles?.projects}
+                onChangeTitle={(title) => handleUpdateSectionTitle('projects', title)}
+                compact
+              />
+
+              {(!cv.projects || cv.projects.length === 0) ? (
+                <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 space-y-2.5">
+                  <Layers className="w-6 h-6 text-slate-300 mx-auto" />
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">No projects added yet</p>
+                    <p className="text-[11px] text-slate-400">Highlight client projects, open source tools, or architectural case studies</p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => handleDeleteProject(pIdx)}
-                      className="text-slate-400 hover:text-rose-500 cursor-pointer"
+                      onClick={() => handleAddProject(false)}
+                      className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3" /> Add Blank Project
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddProject(true)}
+                      className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-600" /> Insert Sample Project
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={proj.title}
-                      onChange={(e) => handleUpdateProject(pIdx, { title: e.target.value })}
-                      placeholder="Project Title"
-                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={proj.link || ''}
-                      onChange={(e) => handleUpdateProject(pIdx, { link: e.target.value })}
-                      placeholder="Project URL (e.g. github.com/...)"
-                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    value={proj.subtitle || ''}
-                    onChange={(e) => handleUpdateProject(pIdx, { subtitle: e.target.value })}
-                    placeholder="Technologies / Subtitle (e.g. React, Next.js, Node)"
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                  />
                 </div>
-              ))}
+              ) : (
+                cv.projects.map((proj, pIdx) => (
+                  <div key={proj.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 relative">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">Project #{pIdx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProject(pIdx)}
+                        className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 rounded-md hover:bg-slate-200/60 transition"
+                        title="Remove Project"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={proj.title}
+                        onChange={(e) => handleUpdateProject(pIdx, { title: e.target.value })}
+                        placeholder="Project Title (e.g. E-Commerce Platform)"
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={proj.link || ''}
+                        onChange={(e) => handleUpdateProject(pIdx, { link: e.target.value })}
+                        placeholder="Project URL (e.g. github.com/user/project)"
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={proj.subtitle || ''}
+                        onChange={(e) => handleUpdateProject(pIdx, { subtitle: e.target.value })}
+                        placeholder="Technologies / Subtitle (e.g. React, Next.js, Node)"
+                        className="sm:col-span-2 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={proj.startDate || ''}
+                        onChange={(e) => handleUpdateProject(pIdx, { startDate: e.target.value })}
+                        placeholder="Timeline (e.g. 2023 – Present)"
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Project Description (Multiline)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={proj.description || ''}
+                        onChange={(e) => handleUpdateProject(pIdx, { description: e.target.value })}
+                        placeholder="Describe the project overview, key features, architecture, and measurable outcomes. Multiple lines & paragraphs supported..."
+                        className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs leading-relaxed focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                      />
+                    </div>
+
+                    {/* Optional Key Highlights / Bullets */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-600">
+                          Key Highlights / Bullets (Optional)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleAddProjectHighlight(pIdx)}
+                          className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" /> Add Bullet
+                        </button>
+                      </div>
+
+                      {proj.highlights?.map((hl, hlIdx) => (
+                        <div key={hlIdx} className="flex items-start gap-1.5">
+                          <span className="text-slate-400 mt-2 text-xs">•</span>
+                          <input
+                            type="text"
+                            value={hl}
+                            onChange={(e) => handleUpdateProjectHighlight(pIdx, hlIdx, e.target.value)}
+                            placeholder="e.g. Achieved 99.9% uptime and reduced latency by 35%..."
+                            className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProjectHighlight(pIdx, hlIdx)}
+                            className="text-slate-400 hover:text-rose-500 p-1.5 rounded hover:bg-slate-200/50 transition cursor-pointer"
+                            title="Remove bullet"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Certifications */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between">
+            <div className="space-y-3 pt-4 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                     Certifications & Licenses
@@ -1157,55 +1581,95 @@ export const CvEditor: React.FC<Props> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleAddCert}
+                  onClick={() => handleAddCert(false)}
                   className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" /> Add Certificate
                 </button>
               </div>
 
-              {cv.certifications?.map((c, cIdx) => (
-                <div key={c.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Certificate #{cIdx + 1}</span>
+              {/* Section Heading Customization */}
+              <SectionTitleField
+                sectionKey="certifications"
+                currentTitle={cv.sectionTitles?.certifications}
+                onChangeTitle={(title) => handleUpdateSectionTitle('certifications', title)}
+                compact
+              />
+
+              {(!cv.certifications || cv.certifications.length === 0) ? (
+                <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 space-y-2">
+                  <Award className="w-6 h-6 text-slate-300 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">No certifications added yet</p>
+                  <div className="flex items-center justify-center gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => handleDeleteCert(cIdx)}
-                      className="text-slate-400 hover:text-rose-500 cursor-pointer"
+                      onClick={() => handleAddCert(false)}
+                      className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3" /> Add Blank Certificate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCert(true)}
+                      className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-600" /> Insert Sample Certificate
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input
-                      type="text"
-                      value={c.name}
-                      onChange={(e) => handleUpdateCert(cIdx, { name: e.target.value })}
-                      placeholder="Certificate Name"
-                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={c.issuer}
-                      onChange={(e) => handleUpdateCert(cIdx, { issuer: e.target.value })}
-                      placeholder="Issuing Body"
-                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={c.issueDate}
-                      onChange={(e) => handleUpdateCert(cIdx, { issueDate: e.target.value })}
-                      placeholder="Date (e.g. 2023)"
-                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                    />
-                  </div>
                 </div>
-              ))}
+              ) : (
+                cv.certifications.map((c, cIdx) => (
+                  <div key={c.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">Certificate #{cIdx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCert(cIdx)}
+                        className="text-slate-400 hover:text-rose-500 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={c.name}
+                        onChange={(e) => handleUpdateCert(cIdx, { name: e.target.value })}
+                        placeholder="Certificate Name"
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={c.issuer}
+                        onChange={(e) => handleUpdateCert(cIdx, { issuer: e.target.value })}
+                        placeholder="Issuing Body"
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={c.issueDate}
+                        onChange={(e) => handleUpdateCert(cIdx, { issueDate: e.target.value })}
+                        placeholder="Date (e.g. 2023)"
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={c.credentialUrl || ''}
+                        onChange={(e) => handleUpdateCert(cIdx, { credentialUrl: e.target.value })}
+                        placeholder="Verification Link (e.g. credential.net/12345)"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Languages */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between">
+            <div className="space-y-3 pt-4 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                     Languages
@@ -1213,42 +1677,335 @@ export const CvEditor: React.FC<Props> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleAddLanguage}
+                  onClick={() => handleAddLanguage(false)}
                   className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" /> Add Language
                 </button>
               </div>
 
-              {cv.languages?.map((l, lIdx) => (
-                <div key={l.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                  <input
-                    type="text"
-                    value={l.language}
-                    onChange={(e) => handleUpdateLanguage(lIdx, { language: e.target.value })}
-                    placeholder="Language (e.g. Spanish)"
-                    className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                  />
-                  <select
-                    value={l.proficiency}
-                    onChange={(e) => handleUpdateLanguage(lIdx, { proficiency: e.target.value as any })}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
-                  >
-                    <option value="Native">Native</option>
-                    <option value="Fluent">Fluent</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Basic">Basic</option>
-                  </select>
+              {/* Section Heading Customization */}
+              <SectionTitleField
+                sectionKey="languages"
+                currentTitle={cv.sectionTitles?.languages}
+                onChangeTitle={(title) => handleUpdateSectionTitle('languages', title)}
+                compact
+              />
+
+              {(!cv.languages || cv.languages.length === 0) ? (
+                <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 space-y-2">
+                  <Globe className="w-6 h-6 text-slate-300 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">No languages specified</p>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleAddLanguage(false)}
+                      className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Add Blank Language
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddLanguage(true)}
+                      className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-600" /> Insert Sample Language
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                cv.languages.map((l, lIdx) => (
+                  <div key={l.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                    <input
+                      type="text"
+                      value={l.language}
+                      onChange={(e) => handleUpdateLanguage(lIdx, { language: e.target.value })}
+                      placeholder="Language (e.g. Spanish)"
+                      className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                    />
+                    <select
+                      value={l.proficiency}
+                      onChange={(e) => handleUpdateLanguage(lIdx, { proficiency: e.target.value as any })}
+                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                    >
+                      <option value="Native">Native</option>
+                      <option value="Fluent">Fluent</option>
+                      <option value="Advanced">Advanced</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Basic">Basic</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteLanguage(lIdx)}
+                      className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* ================= CUSTOM SECTIONS MANAGER ================= */}
+            <div className="space-y-4 pt-4 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <FolderPlus className="w-4 h-4 text-indigo-600" />
+                    <span>Custom Sections</span>
+                    <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold">
+                      {cv.customSections?.length || 0}
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Add custom sections for Awards & Honors, Publications, Volunteering, Speaking, or Patents.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => handleDeleteLanguage(lIdx)}
-                    className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer"
+                    onClick={() => handleAddCustomSection(false)}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Plus className="w-3 h-3" /> Blank Section
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddCustomSection(true)}
+                    className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
+                  >
+                    <Sparkles className="w-3 h-3 text-indigo-600" /> Add with Sample Structure
                   </button>
                 </div>
-              ))}
+              </div>
+
+              {/* Quick Starter Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quick Starters:</span>
+                {[
+                  'Awards & Honors',
+                  'Publications & Research',
+                  'Volunteering & Community',
+                  'Speaking & Conferences',
+                  'Patents & Inventions'
+                ].map((title) => (
+                  <button
+                    key={title}
+                    type="button"
+                    onClick={() => handleAddCustomSection(true, title)}
+                    className="px-2 py-0.5 rounded text-[10px] font-medium bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-700 transition cursor-pointer"
+                  >
+                    + {title}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Sections List or Empty State */}
+              {(!cv.customSections || cv.customSections.length === 0) ? (
+                <div className="p-6 text-center border-2 border-dashed border-indigo-200/80 rounded-xl bg-indigo-50/30 space-y-3">
+                  <FolderPlus className="w-7 h-7 text-indigo-400 mx-auto" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">No custom sections added</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 max-w-md mx-auto">
+                      Include any custom section like Key Achievements, Publications, Volunteering, or Speaking engagements.
+                      Click below to insert a pre-structured template!
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomSection(true, 'Key Achievements & Awards')}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Add Sample Achievements Section</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomSection(false, 'Custom Section')}
+                      className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs"
+                    >
+                      <span>Add Blank Custom Section</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cv.customSections.map((sec, sIdx) => (
+                    <div
+                      key={sec.id}
+                      className="p-4 bg-slate-50/90 rounded-xl border border-slate-200 shadow-2xs space-y-3"
+                    >
+                      {/* Section Title Header & Delete */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Section Heading Title
+                          </label>
+                          <input
+                            type="text"
+                            value={sec.sectionTitle}
+                            onChange={(e) => handleUpdateCustomSectionTitle(sIdx, e.target.value)}
+                            placeholder="Section Title (e.g. Awards & Honors)"
+                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomSection(sIdx)}
+                          className="mt-4 px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                          title="Delete entire custom section"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Section</span>
+                        </button>
+                      </div>
+
+                      {/* Title Suggestion Chips */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-slate-400">Suggestions:</span>
+                        {[
+                          'Key Achievements & Awards',
+                          'Publications & Research',
+                          'Volunteering & Community',
+                          'Speaking & Conferences',
+                          'Patents',
+                          'Affiliations'
+                        ].map((sug) => (
+                          <button
+                            key={sug}
+                            type="button"
+                            onClick={() => handleUpdateCustomSectionTitle(sIdx, sug)}
+                            className="px-2 py-0.5 rounded text-[10px] font-medium bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
+                          >
+                            {sug}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Items in this custom section */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-700">
+                            Section Items ({sec.items?.length || 0})
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleAddCustomSectionItem(sIdx, false)}
+                              className="text-[11px] text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" /> Add Item
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAddCustomSectionItem(sIdx, true)}
+                              className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Sparkles className="w-3 h-3" /> Add Sample Item
+                            </button>
+                          </div>
+                        </div>
+
+                        {(!sec.items || sec.items.length === 0) ? (
+                          <div className="p-3 bg-white rounded-lg border border-dashed border-slate-300 text-center">
+                            <p className="text-xs text-slate-500">No items in this section yet.</p>
+                            <button
+                              type="button"
+                              onClick={() => handleAddCustomSectionItem(sIdx, true)}
+                              className="mt-1 text-xs text-indigo-600 font-bold hover:underline cursor-pointer"
+                            >
+                              + Add structured item
+                            </button>
+                          </div>
+                        ) : (
+                          sec.items.map((item, iIdx) => (
+                            <div
+                              key={item.id}
+                              className="p-3 bg-white rounded-lg border border-slate-200 space-y-2 relative"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-700">
+                                  Entry #{iIdx + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCustomSectionItem(sIdx, iIdx)}
+                                  className="text-slate-400 hover:text-rose-600 p-1 rounded cursor-pointer"
+                                  title="Remove item"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div className="sm:col-span-2">
+                                  <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                                    Item Title / Award / Paper
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.title}
+                                    onChange={(e) =>
+                                      handleUpdateCustomSectionItem(sIdx, iIdx, { title: e.target.value })
+                                    }
+                                    placeholder="e.g. Engineering Excellence Award"
+                                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                                    Date / Year
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.date || ''}
+                                    onChange={(e) =>
+                                      handleUpdateCustomSectionItem(sIdx, iIdx, { date: e.target.value })
+                                    }
+                                    placeholder="e.g. 2024"
+                                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                                  Subtitle / Organization / Publication Venue
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.subtitle || ''}
+                                  onChange={(e) =>
+                                    handleUpdateCustomSectionItem(sIdx, iIdx, { subtitle: e.target.value })
+                                  }
+                                  placeholder="e.g. Apex Global Technology Summit"
+                                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                                  Description / Key Details (Multiline)
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={item.description}
+                                  onChange={(e) =>
+                                    handleUpdateCustomSectionItem(sIdx, iIdx, { description: e.target.value })
+                                  }
+                                  placeholder="Describe the recognition, contribution, publisher, or impact..."
+                                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs leading-relaxed focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="pt-4 flex justify-between">
@@ -1390,6 +2147,53 @@ export const CvEditor: React.FC<Props> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Comprehensive Section Heading Titles Customization */}
+            <div className="pt-4 border-t border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Type className="w-4 h-4 text-indigo-600" />
+                    <span>CV Section Heading Titles</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Customize the printed titles for any section across all CV templates.
+                  </p>
+                </div>
+                {cv.sectionTitles && Object.keys(cv.sectionTitles).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => updateCv({ sectionTitles: {} })}
+                    className="text-[10px] text-slate-500 hover:text-slate-800 flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset All to Defaults</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2.5">
+                {(
+                  [
+                    'summary',
+                    'experience',
+                    'education',
+                    'skills',
+                    'projects',
+                    'certifications',
+                    'languages'
+                  ] as (keyof SectionTitles)[]
+                ).map((sKey) => (
+                  <SectionTitleField
+                    key={sKey}
+                    sectionKey={sKey}
+                    currentTitle={cv.sectionTitles?.[sKey]}
+                    onChangeTitle={(newTitle) => handleUpdateSectionTitle(sKey, newTitle)}
+                    compact
+                  />
+                ))}
               </div>
             </div>
           </div>

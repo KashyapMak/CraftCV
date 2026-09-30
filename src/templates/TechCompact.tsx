@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 import { Terminal } from 'lucide-react';
 
 interface Props {
@@ -39,6 +40,9 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
       {/* Summary */}
       {cv.summary && (
         <section className="mb-4 break-inside-avoid">
+          <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: theme }}>
+            // {getSectionTitle(cv, 'summary', 'Profile Summary')}
+          </div>
           <p className="text-xs text-slate-700 leading-normal text-justify">
             {cv.summary}
           </p>
@@ -49,9 +53,9 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
       {cv.skills.length > 0 && (
         <section className="mb-4 bg-slate-50 p-3 rounded border border-slate-200 break-inside-avoid">
           <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-            // Core Technical Stack
+            // {getSectionTitle(cv, 'skills', 'Core Technical Stack')}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 gap-2 text-xs">
             {cv.skills.map((s) => (
               <div key={s.id}>
                 <span className="font-mono font-semibold text-slate-900">{s.category}: </span>
@@ -66,7 +70,7 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
       {cv.experiences.length > 0 && (
         <section className="mb-5">
           <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-2 pb-1 border-b" style={{ color: theme, borderColor: '#e2e8f0' }}>
-            // Work Experience
+            // {getSectionTitle(cv, 'experience', 'Work Experience')}
           </div>
           <div className="space-y-3.5">
             {cv.experiences.map((exp) => (
@@ -98,7 +102,7 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
       {cv.projects && cv.projects.length > 0 && (
         <section className="mb-4 break-inside-avoid">
           <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-2 pb-1 border-b" style={{ color: theme, borderColor: '#e2e8f0' }}>
-            // Featured Projects & Open Source
+            // {getSectionTitle(cv, 'projects', 'Featured Projects & Open Source')}
           </div>
           <div className="space-y-2">
             {cv.projects.map((proj) => (
@@ -108,6 +112,11 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
                   {proj.link && <span className="font-mono text-indigo-600 font-normal">{proj.link}</span>}
                 </div>
                 {proj.subtitle && <div className="text-slate-500 font-mono text-[11px]">{proj.subtitle}</div>}
+                {proj.description && (
+                  <p className="mt-0.5 text-xs text-slate-700 leading-relaxed whitespace-pre-line">
+                    {proj.description}
+                  </p>
+                )}
                 {proj.highlights && (
                   <ul className="list-disc list-outside ml-4 mt-0.5 space-y-0.5 text-slate-700">
                     {proj.highlights.map((h, i) => (
@@ -121,12 +130,33 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
         </section>
       )}
 
+      {/* Custom Sections */}
+      {cv.customSections && cv.customSections.map((sec) => (
+        <section key={sec.id} className="mb-4 break-inside-avoid">
+          <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-2 pb-1 border-b" style={{ color: theme, borderColor: '#e2e8f0' }}>
+            // {sec.sectionTitle}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {sec.items.map((item) => (
+              <div key={item.id} className="p-2 bg-slate-50 rounded border border-slate-200">
+                <div className="flex justify-between font-bold text-slate-900">
+                  <span>{item.title}</span>
+                  {item.date && <span className="font-mono text-[10px] text-slate-500">{item.date}</span>}
+                </div>
+                {item.subtitle && <div className="text-[11px] text-slate-600 font-mono">{item.subtitle}</div>}
+                {item.description && <p className="mt-1 text-slate-700">{item.description}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+
       {/* Education & Certs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {cv.educations.length > 0 && (
           <div className="break-inside-avoid">
             <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-1.5 pb-1 border-b" style={{ color: theme, borderColor: '#e2e8f0' }}>
-              // Education
+              // {getSectionTitle(cv, 'education', 'Education')}
             </div>
             {cv.educations.map((edu) => (
               <div key={edu.id} className="mb-1">
@@ -140,7 +170,7 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
         {cv.certifications && cv.certifications.length > 0 && (
           <div className="break-inside-avoid">
             <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-1.5 pb-1 border-b" style={{ color: theme, borderColor: '#e2e8f0' }}>
-              // Certifications
+              // {getSectionTitle(cv, 'certifications', 'Certifications')}
             </div>
             <ul className="space-y-0.5 text-slate-700">
               {cv.certifications.map((c) => (
@@ -152,6 +182,22 @@ export const TechCompactTemplate: React.FC<Props> = ({ cv }) => {
           </div>
         )}
       </div>
+
+      {/* Languages */}
+      {cv.languages && cv.languages.length > 0 && (
+        <div className="mt-3 pt-2 border-t border-slate-200 break-inside-avoid">
+          <div className="font-mono text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: theme }}>
+            // {getSectionTitle(cv, 'languages', 'Languages')}
+          </div>
+          <div className="flex flex-wrap gap-3 font-mono text-[11px] text-slate-700">
+            {cv.languages.map((l) => (
+              <span key={l.id}>
+                {l.language}: <strong>{l.proficiency}</strong>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

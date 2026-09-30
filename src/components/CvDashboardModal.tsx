@@ -142,10 +142,15 @@ export const CvDashboardModal: React.FC<Props> = ({
         {
           id: "proj_1",
           title: "Real-time Analytics Dashboard",
-          subtitle: "Open Source",
+          subtitle: "React, TypeScript, Tailwind CSS, WebSockets",
           description: "Built performant analytics visualizer processing 50k events/sec.",
           link: "https://github.com/example/analytics",
-          technologies: ["React", "TypeScript", "Tailwind CSS", "WebSockets"]
+          startDate: "2023",
+          endDate: "Present",
+          highlights: [
+            "Engineered low-latency WebSockets pipeline rendering real-time streaming data updates.",
+            "Reduced bundle size by 40% using code splitting and lazy component loading."
+          ]
         }
       ],
       certifications: [
@@ -154,7 +159,7 @@ export const CvDashboardModal: React.FC<Props> = ({
           name: "AWS Certified Solutions Architect",
           issuer: "Amazon Web Services",
           issueDate: "2023",
-          credentialId: "AWS-12345"
+          credentialUrl: "https://aws.amazon.com/verification"
         }
       ],
       languages: [
@@ -164,7 +169,30 @@ export const CvDashboardModal: React.FC<Props> = ({
           proficiency: "Native / Bilingual"
         }
       ],
-      customSections: []
+      sectionTitles: {
+        summary: "Professional Summary",
+        experience: "Work Experience",
+        education: "Education",
+        skills: "Key Skills",
+        projects: "Key Projects",
+        certifications: "Certifications",
+        languages: "Languages"
+      },
+      customSections: [
+        {
+          id: "custom_1",
+          sectionTitle: "Key Achievements & Awards",
+          items: [
+            {
+              id: "item_1",
+              title: "Global Innovation Award",
+              subtitle: "Apex Technology Summit",
+              date: "2024",
+              description: "Awarded 1st place among 150+ international teams for lowest-latency routing architecture."
+            }
+          ]
+        }
+      ]
     };
 
     const blob = new Blob([JSON.stringify(templateData, null, 2)], { type: 'application/json' });
@@ -172,6 +200,19 @@ export const CvDashboardModal: React.FC<Props> = ({
     const link = document.createElement('a');
     link.href = url;
     link.download = 'cv_template_schema.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download Alexander Wright sample profile JSON
+  const handleDownloadAlexanderWrightJson = () => {
+    const blob = new Blob([JSON.stringify(SAMPLE_CV, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'alexander_wright_sample_cv.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -319,7 +360,18 @@ export const CvDashboardModal: React.FC<Props> = ({
               title="Download standard CV JSON template schema to fill or edit offline"
             >
               <FileCode className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Download Template JSON</span>
+              <span>Download Schema JSON</span>
+            </button>
+
+            {/* Download Alexander Wright Profile JSON */}
+            <button
+              type="button"
+              onClick={handleDownloadAlexanderWrightJson}
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              title="Download Alexander Wright's complete sample JSON profile"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Alexander Wright Sample (JSON)</span>
             </button>
           </div>
 

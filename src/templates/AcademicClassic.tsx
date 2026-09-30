@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -27,6 +28,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
           {p.location && <span>· {p.location}</span>}
           {p.linkedin && <span>· {p.linkedin}</span>}
           {p.website && <span>· {p.website}</span>}
+          {p.github && <span>· {p.github}</span>}
         </div>
       </header>
 
@@ -34,7 +36,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
       {cv.summary && (
         <section className="mb-6 break-inside-avoid">
           <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
-            Profile & Research Statement
+            {getSectionTitle(cv, 'summary', 'Profile & Research Statement')}
           </h2>
           <p className="text-sm text-stone-800 leading-relaxed text-justify">
             {cv.summary}
@@ -46,7 +48,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
       {cv.educations.length > 0 && (
         <section className="mb-6 break-inside-avoid">
           <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
-            Education
+            {getSectionTitle(cv, 'education', 'Education')}
           </h2>
           <div className="space-y-3">
             {cv.educations.map((edu) => (
@@ -80,7 +82,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
       {cv.experiences.length > 0 && (
         <section className="mb-6">
           <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
-            Appointments & Experience
+            {getSectionTitle(cv, 'experience', 'Appointments & Experience')}
           </h2>
           <div className="space-y-4">
             {cv.experiences.map((exp) => (
@@ -115,7 +117,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
       {cv.projects && cv.projects.length > 0 && (
         <section className="mb-6 break-inside-avoid">
           <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
-            Publications, Projects & Grants
+            {getSectionTitle(cv, 'projects', 'Publications, Projects & Grants')}
           </h2>
           <div className="space-y-2.5">
             {cv.projects.map((proj) => (
@@ -125,6 +127,12 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
                   {proj.startDate && <span className="font-sans font-normal text-stone-500">{proj.startDate}</span>}
                 </div>
                 {proj.subtitle && <div className="italic text-stone-600">{proj.subtitle}</div>}
+                {proj.link && <div className="font-sans text-stone-600 text-[11px]">{proj.link}</div>}
+                {proj.description && (
+                  <p className="mt-1 text-stone-700 leading-relaxed whitespace-pre-line font-serif">
+                    {proj.description}
+                  </p>
+                )}
                 {proj.highlights && (
                   <ul className="list-disc list-outside ml-4 mt-1 text-stone-700 space-y-0.5">
                     {proj.highlights.map((h, i) => (
@@ -142,7 +150,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
       {cv.skills.length > 0 && (
         <section className="mb-6 break-inside-avoid">
           <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
-            Areas of Expertise
+            {getSectionTitle(cv, 'skills', 'Areas of Expertise')}
           </h2>
           <div className="space-y-1 text-xs text-stone-800">
             {cv.skills.map((s) => (
@@ -155,12 +163,33 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
         </section>
       )}
 
+      {/* Custom Sections */}
+      {cv.customSections && cv.customSections.map((sec) => (
+        <section key={sec.id} className="mb-6 break-inside-avoid">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
+            {sec.sectionTitle}
+          </h2>
+          <div className="space-y-2.5">
+            {sec.items.map((item) => (
+              <div key={item.id} className="text-xs">
+                <div className="flex justify-between font-bold text-stone-900 font-serif">
+                  <span>{item.title}</span>
+                  {item.date && <span className="font-sans font-normal text-stone-500">{item.date}</span>}
+                </div>
+                {item.subtitle && <div className="italic text-stone-600">{item.subtitle}</div>}
+                {item.description && <p className="mt-0.5 text-stone-700 leading-relaxed font-serif">{item.description}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+
       {/* Languages & Certifications */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+      <div className="grid grid-cols-2 gap-4 text-xs">
         {cv.languages && cv.languages.length > 0 && (
           <div className="break-inside-avoid">
             <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-1.5 font-serif">
-              Languages
+              {getSectionTitle(cv, 'languages', 'Languages')}
             </h2>
             <div className="space-y-0.5 text-stone-700">
               {cv.languages.map((l) => (
@@ -175,7 +204,7 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
         {cv.certifications && cv.certifications.length > 0 && (
           <div className="break-inside-avoid">
             <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-1.5 font-serif">
-              Affiliations & Certifications
+              {getSectionTitle(cv, 'certifications', 'Affiliations & Certifications')}
             </h2>
             <ul className="space-y-0.5 text-stone-700">
               {cv.certifications.map((c) => (

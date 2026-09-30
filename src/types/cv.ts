@@ -47,6 +47,7 @@ export interface ProjectItem {
   link?: string;
   startDate?: string;
   endDate?: string;
+  description?: string;
   highlights: string[];
 }
 
@@ -78,6 +79,16 @@ export interface CustomSection {
   items: CustomSectionItem[];
 }
 
+export interface SectionTitles {
+  summary?: string;
+  experience?: string;
+  education?: string;
+  skills?: string;
+  projects?: string;
+  certifications?: string;
+  languages?: string;
+}
+
 export type FontFamilyType = 'inter' | 'jakarta' | 'garamond' | 'mono' | 'cinzel';
 export type SpacingType = 'compact' | 'normal' | 'spacious';
 export type FontSizeType = 'sm' | 'base' | 'lg';
@@ -102,6 +113,7 @@ export interface CVData {
   certifications: CertificationItem[];
   languages: LanguageItem[];
   customSections: CustomSection[];
+  sectionTitles?: SectionTitles;
 }
 
 export interface TemplateConfig {

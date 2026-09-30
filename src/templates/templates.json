@@ -1,5 +1,65 @@
 [
   {
+    "id": "sandstone-executive",
+    "name": "Sandstone Executive",
+    "category": "Corporate",
+    "description": "Warm sand accent block with 4-point contact pill matrix, crisp top-right portrait, dual-column structure, and solid grounded accent footer.",
+    "recommendedFor": "Accounting, Finance, Operations, Senior Consultants & Corporate Executives",
+    "badge": "New Template",
+    "defaultColor": "#c4ad94",
+    "accentColors": ["#c4ad94", "#1e3a8a", "#0f766e", "#334155", "#8c6239", "#b91c1c"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "geneva-grid",
+    "name": "Geneva Grid",
+    "category": "Modern",
+    "description": "Architectural grid with circular bordered avatar, two-tone header typography, and crisp continuous border separators between modules.",
+    "recommendedFor": "Strategy, Executive Management, Financial Reporting & Advisory",
+    "badge": "New Template",
+    "defaultColor": "#bfa37e",
+    "accentColors": ["#bfa37e", "#2563eb", "#059669", "#7c3aed", "#be123c", "#1e293b"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "botanical-terracotta",
+    "name": "Botanical Terracotta",
+    "category": "Creative",
+    "description": "Warm cream ivory aesthetic with soft sage curved pill sidebar, terracotta serif typography, and connected career timeline node bullets.",
+    "recommendedFor": "Healthcare, Pharmacy, Wellness, Architecture, Research & Design",
+    "badge": "New Template",
+    "defaultColor": "#a35638",
+    "accentColors": ["#a35638", "#3b6b55", "#25537b", "#744b82", "#2e4057", "#8c531b"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "nordic-contrast",
+    "name": "Nordic Contrast",
+    "category": "Modern",
+    "description": "Full-bleed deep slate/navy left sidebar with circular portrait, paired with an organized tabular timeline with left-aligned date columns.",
+    "recommendedFor": "Marketing, Brand Strategy, Product Management & Team Leaders",
+    "badge": "New Template",
+    "defaultColor": "#2d3748",
+    "accentColors": ["#2d3748", "#1e3a8a", "#0f766e", "#4338ca", "#581c87", "#831843"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
+    "id": "silicon-accent",
+    "name": "Silicon Accent",
+    "category": "Tech",
+    "description": "Developer layout featuring a signature vibrant accent role badge, left avatar, vertical callout summary bar, and milestone education rail.",
+    "recommendedFor": "Software Engineers, Backend Developers, DevOps & Data Architects",
+    "badge": "New Template",
+    "defaultColor": "#84cc16",
+    "accentColors": ["#84cc16", "#06b6d4", "#3b82f6", "#f59e0b", "#10b981", "#ec4899"],
+    "hasSidebar": true,
+    "supportsPhoto": true
+  },
+  {
     "id": "modern-executive",
     "name": "Modern Executive",
     "category": "Modern",

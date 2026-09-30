@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CVData } from '../types/cv';
 import { TemplateRenderer } from '../templates/TemplateRenderer';
 import { TEMPLATES } from '../templates/templatesRegistry';
+import { ALEXANDER_WRIGHT_SAMPLE_CV, isCvEmpty } from '../data/sampleCV';
 import {
   LayoutTemplate,
   ZoomIn,
@@ -11,7 +12,10 @@ import {
   SlidersHorizontal,
   Eye,
   Scissors,
-  Palette
+  Palette,
+  User,
+  Sparkles,
+  Info
 } from 'lucide-react';
 
 interface Props {
@@ -19,11 +23,58 @@ interface Props {
   onOpenTemplates: () => void;
   onSwitchToEditor?: () => void;
   onUpdateThemeColor?: (color: string) => void;
+  showPdfHeaderFooter?: boolean;
+  onTogglePdfHeaderFooter?: (show: boolean) => void;
+  showPdfFooter?: boolean;
+  onTogglePdfFooter?: (show: boolean) => void;
+  onLoadSample?: () => void;
 }
 
 export type PageMarginPreset = 14 | 20 | 26; // Compact, Standard, Spacious in mm
 
-export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeColor }) => {
+export const CvPreview: React.FC<Props> = ({
+  cv,
+  onOpenTemplates,
+  onSwitchToEditor,
+  onUpdateThemeColor,
+  showPdfHeaderFooter,
+  onTogglePdfHeaderFooter,
+  showPdfFooter,
+  onTogglePdfFooter,
+  onLoadSample
+}) => {
+  const [localPdfHeaderFooter, setLocalPdfHeaderFooter] = useState<boolean>(true);
+  const isPdfHeaderFooterActive =
+    showPdfHeaderFooter !== undefined
+      ? showPdfHeaderFooter
+      : showPdfFooter !== undefined
+      ? showPdfFooter
+      : localPdfHeaderFooter;
+
+  // Check whether user has populated their CV details
+  const userHasCv = !isCvEmpty(cv);
+  const [showSamplePreview, setShowSamplePreview] = useState<boolean>(!userHasCv);
+
+  useEffect(() => {
+    if (!userHasCv) {
+      setShowSamplePreview(true);
+    }
+  }, [userHasCv]);
+
+  const isUsingSample = showSamplePreview || !userHasCv;
+
+  // Effective CV rendered in preview: falls back to Alexander Wright's profile if user CV is empty or sample is chosen
+  const effectiveCv: CVData = isUsingSample
+    ? {
+        ...ALEXANDER_WRIGHT_SAMPLE_CV,
+        templateId: cv.templateId || 'modern-executive',
+        themeColor: cv.themeColor || '#2563eb',
+        fontFamily: cv.fontFamily || 'inter',
+        fontSize: cv.fontSize || 'base',
+        lineSpacing: cv.lineSpacing || 'normal'
+      }
+    : cv;
+
   // Zoom mode: 'fit' (auto adjusts to container width so user sees complete page) or 'manual' (%)
   const [zoomMode, setZoomMode] = useState<'fit' | 'manual'>('fit');
   const [manualZoom, setManualZoom] = useState<number>(100);
@@ -39,7 +90,7 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
 
-  const currentTemplate = TEMPLATES.find((t) => t.id === cv.templateId) || TEMPLATES[0];
+  const currentTemplate = TEMPLATES.find((t) => t.id === effectiveCv.templateId) || TEMPLATES[0];
 
   // Auto-calculate "Fit to Width" scale so user always sees the complete A4 page
   useEffect(() => {
@@ -102,7 +153,7 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
     calculatePages();
     const timer = setTimeout(calculatePages, 200);
     return () => clearTimeout(timer);
-  }, [cv, pageMarginMm]);
+  }, [effectiveCv, pageMarginMm]);
 
   const activeScale = zoomMode === 'fit' ? fitScale : manualZoom / 100;
   const displayZoomPercent = Math.round(activeScale * 100);
@@ -125,17 +176,17 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
   const page1ContentHeightMm = 297 - pageMarginMm;
   const page2ContentHeightMm = 297 - 2 * pageMarginMm;
 
-  const candidateName = cv.personalDetails.fullName || 'Candidate';
-  const roleTitle = cv.personalDetails.jobTitle || 'Curriculum Vitae';
+  const candidateName = effectiveCv.personalDetails.fullName || 'Candidate';
+  const roleTitle = effectiveCv.personalDetails.jobTitle || 'Curriculum Vitae';
 
   return (
     <div className="flex flex-col h-full bg-slate-100/90 rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
       {/* Top Preview Controls Bar */}
       <div className="no-print px-4 py-2.5 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        {/* Active Layout Switcher & Theme Color Selector */}
+        {/* Active Layout Switcher & Profile Switcher */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-500 hidden sm:inline">Active Layout:</span>
+            <span className="text-xs font-bold text-slate-500 hidden sm:inline">Layout:</span>
             <button
               type="button"
               onClick={onOpenTemplates}
@@ -144,6 +195,45 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
             >
               <LayoutTemplate className="w-3.5 h-3.5 text-indigo-600" />
               <span>{currentTemplate.name}</span>
+            </button>
+          </div>
+
+          {/* Profile Switcher (Sample Profile vs User CV) */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+            <button
+              type="button"
+              onClick={() => setShowSamplePreview(true)}
+              className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                isUsingSample
+                  ? 'bg-indigo-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Preview template with Alexander Wright's complete sample JSON profile"
+            >
+              <User className="w-3 h-3" />
+              <span>Alexander Wright (Sample)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (userHasCv) setShowSamplePreview(false);
+              }}
+              disabled={!userHasCv}
+              className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                !isUsingSample
+                  ? 'bg-indigo-600 text-white shadow-2xs'
+                  : !userHasCv
+                  ? 'text-slate-400 opacity-60 cursor-not-allowed'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title={
+                userHasCv
+                  ? 'Preview template with your own entered CV details'
+                  : 'Your CV is empty. Populate your info in the editor to preview with your CV.'
+              }
+            >
+              <FileText className="w-3 h-3" />
+              <span>My CV {!userHasCv ? '(Empty)' : ''}</span>
             </button>
           </div>
 
@@ -244,6 +334,39 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
           >
             <Eye className="w-3 h-3" />
             <span className="hidden lg:inline">Guides</span>
+          </button>
+
+          {/* Toggle PDF Header & Footer */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onTogglePdfHeaderFooter) {
+                onTogglePdfHeaderFooter(!isPdfHeaderFooterActive);
+              } else if (onTogglePdfFooter) {
+                onTogglePdfFooter(!isPdfHeaderFooterActive);
+              } else {
+                setLocalPdfHeaderFooter(!localPdfHeaderFooter);
+              }
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
+              isPdfHeaderFooterActive
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+            }`}
+            title={
+              isPdfHeaderFooterActive
+                ? 'Header & Footer is ON (page running headers, numbers & candidate name included). Click to turn OFF.'
+                : 'Header & Footer is OFF. Click to turn ON.'
+            }
+          >
+            <span
+              className={`w-2 h-2 rounded-full transition-colors ${
+                isPdfHeaderFooterActive ? 'bg-indigo-600' : 'bg-slate-300'
+              }`}
+            />
+            <span>
+              Header &amp; Footer: <strong>{isPdfHeaderFooterActive ? 'ON' : 'OFF'}</strong>
+            </span>
           </button>
         </div>
 
@@ -351,6 +474,39 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
         </div>
       </div>
 
+      {/* Informational Banner when previewing with Alexander Wright profile because user CV is empty */}
+      {!userHasCv && (
+        <div className="no-print bg-indigo-50/95 border-b border-indigo-100 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-indigo-900 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>
+              Previewing template with <strong>Alexander Wright's sample JSON profile</strong> (loaded automatically because your CV is empty).
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {onLoadSample && (
+              <button
+                type="button"
+                onClick={onLoadSample}
+                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                title="Populate editor with Alexander Wright's details so you can edit directly"
+              >
+                Load to My CV
+              </button>
+            )}
+            {onSwitchToEditor && (
+              <button
+                type="button"
+                onClick={onSwitchToEditor}
+                className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-700 rounded text-[11px] font-bold transition cursor-pointer"
+              >
+                Type My Info
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hidden Canonical Document for Measurement and Print */}
       <div
         id="cv-printable-document"
@@ -358,7 +514,7 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
         className="fixed -left-[9999px] top-0 w-[210mm] bg-white pointer-events-none opacity-0"
         aria-hidden="true"
       >
-        <TemplateRenderer cv={cv} containerId={undefined} />
+        <TemplateRenderer cv={effectiveCv} containerId={undefined} />
       </div>
 
       {/* Hidden Canonical Full-Fidelity Export Container (Clean, unscaled, no guides, always all pages for PDF generation) */}
@@ -382,19 +538,21 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
               maxHeight: totalPages === 1 ? 'none' : `${page1ContentHeightMm}mm`
             }}
           >
-            <TemplateRenderer cv={cv} containerId={undefined} />
+            <TemplateRenderer cv={effectiveCv} containerId={undefined} />
           </div>
-          <div
-            className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
-            style={{ height: `${pageMarginMm}mm` }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
-              <span className="text-slate-300">·</span>
-              <span className="text-slate-400 truncate max-w-[200px]">{roleTitle}</span>
+          {isPdfHeaderFooterActive && (
+            <div
+              className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+              style={{ height: `${pageMarginMm}mm` }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
+                <span className="text-slate-300">·</span>
+                <span className="text-slate-400 truncate max-w-[200px]">{roleTitle}</span>
+              </div>
+              <span>Page 1 of {totalPages}</span>
             </div>
-            <span>Page 1 of {totalPages}</span>
-          </div>
+          )}
         </div>
 
         {/* Export Page 2 (if totalPages > 1) */}
@@ -403,17 +561,19 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
             id="cv-export-page-2"
             className="cv-export-page-sheet w-[210mm] h-[297mm] bg-white relative flex flex-col justify-between overflow-hidden"
           >
-            <div
-              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
-              style={{ height: `${pageMarginMm}mm` }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
-                <span className="text-slate-300">·</span>
-                <span className="text-slate-400">Curriculum Vitae (Continued)</span>
+            {isPdfHeaderFooterActive && (
+              <div
+                className="cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
+                style={{ height: `${pageMarginMm}mm` }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-slate-400">Curriculum Vitae (Continued)</span>
+                </div>
+                <span>Page 2</span>
               </div>
-              <span>Page 2</span>
-            </div>
+            )}
             <div
               className="w-full relative overflow-hidden"
               style={{
@@ -422,16 +582,18 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
               }}
             >
               <div style={{ marginTop: `-${page1ContentHeightMm}mm` }}>
-                <TemplateRenderer cv={cv} containerId={undefined} />
+                <TemplateRenderer cv={effectiveCv} containerId={undefined} />
               </div>
             </div>
-            <div
-              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
-              style={{ height: `${pageMarginMm}mm` }}
-            >
-              <span className="text-slate-400">CV: {candidateName}</span>
-              <span>Page 2 of {totalPages}</span>
-            </div>
+            {isPdfHeaderFooterActive && (
+              <div
+                className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+                style={{ height: `${pageMarginMm}mm` }}
+              >
+                <span className="text-slate-400">CV: {candidateName}</span>
+                <span>Page 2 of {totalPages}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -441,13 +603,15 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
             id="cv-export-page-3"
             className="cv-export-page-sheet w-[210mm] h-[297mm] bg-white relative flex flex-col justify-between overflow-hidden"
           >
-            <div
-              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
-              style={{ height: `${pageMarginMm}mm` }}
-            >
-              <span className="font-sans font-semibold text-slate-500">{candidateName} · CV</span>
-              <span>Page 3</span>
-            </div>
+            {isPdfHeaderFooterActive && (
+              <div
+                className="cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
+                style={{ height: `${pageMarginMm}mm` }}
+              >
+                <span className="font-sans font-semibold text-slate-500">{candidateName} · CV</span>
+                <span>Page 3</span>
+              </div>
+            )}
             <div
               className="w-full relative overflow-hidden"
               style={{
@@ -456,16 +620,18 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
               }}
             >
               <div style={{ marginTop: `-${page1ContentHeightMm + page2ContentHeightMm}mm` }}>
-                <TemplateRenderer cv={cv} containerId={undefined} />
+                <TemplateRenderer cv={effectiveCv} containerId={undefined} />
               </div>
             </div>
-            <div
-              className="w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
-              style={{ height: `${pageMarginMm}mm` }}
-            >
-              <span className="text-slate-400">CV: {candidateName}</span>
-              <span>Page 3 of {totalPages}</span>
-            </div>
+            {isPdfHeaderFooterActive && (
+              <div
+                className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+                style={{ height: `${pageMarginMm}mm` }}
+              >
+                <span className="text-slate-400">CV: {candidateName}</span>
+                <span>Page 3 of {totalPages}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -511,34 +677,45 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
                     maxHeight: totalPages === 1 ? 'none' : `${page1ContentHeightMm}mm`
                   }}
                 >
-                  <TemplateRenderer cv={cv} containerId={undefined} />
+                  <TemplateRenderer cv={effectiveCv} containerId={undefined} />
                 </div>
 
                 {/* Page 1 Bottom Margin Area ({pageMarginMm}mm) */}
-                <div
-                  className={`w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
-                    showMarginGuides
-                      ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
-                      : 'border-t border-slate-100'
-                  }`}
-                  style={{ height: `${pageMarginMm}mm` }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
-                    <span className="text-slate-300">·</span>
-                    <span className="text-slate-400 truncate max-w-[200px]">{roleTitle}</span>
-                  </div>
+                {isPdfHeaderFooterActive ? (
+                  <div
+                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                      showMarginGuides
+                        ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
+                        : 'border-t border-slate-100'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-400 truncate max-w-[200px]">{roleTitle}</span>
+                    </div>
 
-                  {showMarginGuides && (
-                    <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
-                      ↓ {pageMarginMm}mm Bottom Margin
-                    </span>
-                  )}
+                    {showMarginGuides && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
+                        ↓ {pageMarginMm}mm Bottom Margin
+                      </span>
+                    )}
 
-                  <div className="flex items-center gap-2">
-                    <span>Page 1 of {totalPages}</span>
+                    <div className="flex items-center gap-2">
+                      <span>Page 1 of {totalPages}</span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  showMarginGuides && (
+                    <div
+                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-200 select-none bg-slate-50/40"
+                      style={{ height: `${pageMarginMm}mm` }}
+                    >
+                      <span>↓ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -584,30 +761,43 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
                 className="cv-a4-page-sheet w-[210mm] h-[297mm] bg-white shadow-2xl rounded-xs ring-1 ring-slate-300 relative flex flex-col justify-between overflow-hidden select-text"
               >
                 {/* Page 2 Top Margin Area ({pageMarginMm}mm) */}
-                <div
-                  className={`w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
-                    showMarginGuides
-                      ? 'border-b border-dashed border-indigo-300/80 bg-indigo-50/20'
-                      : 'border-b border-slate-100'
-                  }`}
-                  style={{ height: `${pageMarginMm}mm` }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
-                    <span className="text-slate-300">·</span>
-                    <span className="text-slate-400">Curriculum Vitae (Continued)</span>
-                  </div>
+                {isPdfHeaderFooterActive ? (
+                  <div
+                    className={`cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                      showMarginGuides
+                        ? 'border-b border-dashed border-indigo-300/80 bg-indigo-50/20'
+                        : 'border-b border-slate-100'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-sans font-semibold text-slate-500">{candidateName}</span>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-400">Curriculum Vitae (Continued)</span>
+                    </div>
 
-                  {showMarginGuides && (
-                    <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
-                      ↑ {pageMarginMm}mm Top Margin
-                    </span>
-                  )}
+                    {showMarginGuides && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
+                        ↑ {pageMarginMm}mm Top Margin
+                      </span>
+                    )}
 
-                  <div className="flex items-center gap-2">
-                    <span>Page 2</span>
+                    <div className="flex items-center gap-2">
+                      <span>Page 2</span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  showMarginGuides ? (
+                    <div
+                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-b border-dashed border-slate-200 select-none bg-slate-50/40"
+                      style={{ height: `${pageMarginMm}mm` }}
+                    >
+                      <span>↑ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
+                    </div>
+                  ) : (
+                    <div style={{ height: `${pageMarginMm}mm` }} />
+                  )
+                )}
 
                 {/* Printable Content Slice (from Page 1 cut-off downwards) */}
                 <div
@@ -619,29 +809,40 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
                 >
                   {/* Shift content up by Page 1's content height */}
                   <div style={{ marginTop: `-${page1ContentHeightMm}mm` }}>
-                    <TemplateRenderer cv={cv} containerId={undefined} />
+                    <TemplateRenderer cv={effectiveCv} containerId={undefined} />
                   </div>
                 </div>
 
                 {/* Page 2 Bottom Margin Area ({pageMarginMm}mm) */}
-                <div
-                  className={`w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
-                    showMarginGuides
-                      ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
-                      : 'border-t border-slate-100'
-                  }`}
-                  style={{ height: `${pageMarginMm}mm` }}
-                >
-                  <span className="text-slate-400">CV: {candidateName}</span>
+                {isPdfHeaderFooterActive ? (
+                  <div
+                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                      showMarginGuides
+                        ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
+                        : 'border-t border-slate-100'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm` }}
+                  >
+                    <span className="text-slate-400">CV: {candidateName}</span>
 
-                  {showMarginGuides && (
-                    <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
-                      ↓ {pageMarginMm}mm Bottom Margin
-                    </span>
-                  )}
+                    {showMarginGuides && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
+                        ↓ {pageMarginMm}mm Bottom Margin
+                      </span>
+                    )}
 
-                  <span>Page 2 of {totalPages}</span>
-                </div>
+                    <span>Page 2 of {totalPages}</span>
+                  </div>
+                ) : (
+                  showMarginGuides && (
+                    <div
+                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-200 select-none bg-slate-50/40"
+                      style={{ height: `${pageMarginMm}mm` }}
+                    >
+                      <span>↓ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -680,22 +881,35 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
                 className="cv-a4-page-sheet w-[210mm] h-[297mm] bg-white shadow-2xl rounded-xs ring-1 ring-slate-300 relative flex flex-col justify-between overflow-hidden select-text"
               >
                 {/* Page 3 Top Margin Area */}
-                <div
-                  className={`w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
-                    showMarginGuides
-                      ? 'border-b border-dashed border-indigo-300/80 bg-indigo-50/20'
-                      : 'border-b border-slate-100'
-                  }`}
-                  style={{ height: `${pageMarginMm}mm` }}
-                >
-                  <span className="font-sans font-semibold text-slate-500">{candidateName} · CV</span>
-                  {showMarginGuides && (
-                    <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
-                      ↑ {pageMarginMm}mm Top Margin
-                    </span>
-                  )}
-                  <span>Page 3</span>
-                </div>
+                {isPdfHeaderFooterActive ? (
+                  <div
+                    className={`cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                      showMarginGuides
+                        ? 'border-b border-dashed border-indigo-300/80 bg-indigo-50/20'
+                        : 'border-b border-slate-100'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm` }}
+                  >
+                    <span className="font-sans font-semibold text-slate-500">{candidateName} · CV</span>
+                    {showMarginGuides && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
+                        ↑ {pageMarginMm}mm Top Margin
+                      </span>
+                    )}
+                    <span>Page 3</span>
+                  </div>
+                ) : (
+                  showMarginGuides ? (
+                    <div
+                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-b border-dashed border-slate-200 select-none bg-slate-50/40"
+                      style={{ height: `${pageMarginMm}mm` }}
+                    >
+                      <span>↑ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
+                    </div>
+                  ) : (
+                    <div style={{ height: `${pageMarginMm}mm` }} />
+                  )
+                )}
 
                 {/* Printable Content Slice (from Page 2 cut-off downwards) */}
                 <div
@@ -706,22 +920,38 @@ export const CvPreview: React.FC<Props> = ({ cv, onOpenTemplates, onUpdateThemeC
                   }}
                 >
                   <div style={{ marginTop: `-${page1ContentHeightMm + page2ContentHeightMm}mm` }}>
-                    <TemplateRenderer cv={cv} containerId={undefined} />
+                    <TemplateRenderer cv={effectiveCv} containerId={undefined} />
                   </div>
                 </div>
 
                 {/* Page 3 Bottom Margin Area */}
-                <div
-                  className={`w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
-                    showMarginGuides
-                      ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
-                      : 'border-t border-slate-100'
-                  }`}
-                  style={{ height: `${pageMarginMm}mm` }}
-                >
-                  <span className="text-slate-400">CV: {candidateName}</span>
-                  <span>Page 3 of {totalPages}</span>
-                </div>
+                {isPdfHeaderFooterActive ? (
+                  <div
+                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                      showMarginGuides
+                        ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
+                        : 'border-t border-slate-100'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm` }}
+                  >
+                    <span className="text-slate-400">CV: {candidateName}</span>
+                    {showMarginGuides && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-sans font-bold uppercase tracking-wider">
+                        ↓ {pageMarginMm}mm Bottom Margin
+                      </span>
+                    )}
+                    <span>Page 3 of {totalPages}</span>
+                  </div>
+                ) : (
+                  showMarginGuides && (
+                    <div
+                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-200 select-none bg-slate-50/40"
+                      style={{ height: `${pageMarginMm}mm` }}
+                    >
+                      <span>↓ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}

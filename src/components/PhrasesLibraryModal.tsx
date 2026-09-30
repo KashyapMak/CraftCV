@@ -66,7 +66,7 @@ export const PhrasesLibraryModal: React.FC<Props> = ({
                 Pre-Written Phrases & Examples Library
               </h2>
               <p className="text-xs text-slate-500">
-                Recruiter-approved, action-driven bullet points inspired by MyPerfectCV
+                Recruiter-approved, action-driven bullet points crafted for high ATS impact
               </p>
             </div>
           </div>

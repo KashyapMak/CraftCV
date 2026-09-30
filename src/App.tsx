@@ -19,7 +19,7 @@ import {
 import { Header } from './components/Header';
 import { CvEditor } from './components/CvEditor';
 
-export type ExportFormatType = 'print' | 'pdf' | 'docx' | 'html' | 'json';
+export type ExportFormatType = 'pdf' | 'docx' | 'html' | 'json';
 import { CvPreview } from './components/CvPreview';
 import { AtsStrengthMeter } from './components/AtsStrengthMeter';
 import { TemplatePickerModal } from './components/TemplatePickerModal';
@@ -29,7 +29,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { CvDashboardModal } from './components/CvDashboardModal';
 import { HomePage } from './components/HomePage';
 import { TemplateRenderer } from './templates/TemplateRenderer';
-import { triggerPrint, exportDirectPdf, exportToDocx, exportStandaloneHtml } from './utils/exportCv';
+import { ALEXANDER_WRIGHT_SAMPLE_CV } from './data/sampleCV';
+import { exportDirectPdf, exportToDocx, exportStandaloneHtml } from './utils/exportCv';
 import {
   Eye,
   Edit3,
@@ -37,7 +38,6 @@ import {
   Square,
   File,
   ChevronDown,
-  Printer,
   Download,
   FileDown,
   Code,
@@ -60,6 +60,26 @@ export default function App() {
   const [exportFormat, setExportFormat] = useState<ExportFormatType>('pdf');
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
+
+  // PDF Header & Footer on/off toggle (Default to true, persisted in localStorage)
+  const [showPdfHeaderFooter, setShowPdfHeaderFooter] = useState<boolean>(() => {
+    try {
+      const stored =
+        localStorage.getItem('craftcv_show_pdf_header_footer') ??
+        localStorage.getItem('craftcv_show_pdf_footer');
+      return stored !== null ? stored === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleTogglePdfHeaderFooter = (val: boolean) => {
+    setShowPdfHeaderFooter(val);
+    try {
+      localStorage.setItem('craftcv_show_pdf_header_footer', String(val));
+      localStorage.setItem('craftcv_show_pdf_footer', String(val));
+    } catch {}
+  };
 
   // Mobile view toggle (small screens)
   const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
@@ -136,6 +156,26 @@ export default function App() {
     }
   };
 
+  const handleLoadAlexanderWrightSample = () => {
+    if (!activeCv) return;
+    const updated: CVData = {
+      ...ALEXANDER_WRIGHT_SAMPLE_CV,
+      id: activeCv.id,
+      templateId: activeCv.templateId || 'modern-executive',
+      themeColor: activeCv.themeColor || '#2563eb',
+      title: activeCv.title || 'Alexander Wright (Sample CV)',
+      updatedAt: Date.now()
+    };
+    handleUpdateCv(updated);
+  };
+
+  const handlePreviewTemplateFromHome = (templateId: string) => {
+    if (activeCv) {
+      handleUpdateCv({ ...activeCv, templateId });
+    }
+    setIsTemplatesOpen(true);
+  };
+
   const handleReloadCVs = () => {
     const all = getAllCVs();
     setCvs(all);
@@ -188,20 +228,12 @@ export default function App() {
     setIsExportDropdownOpen(false);
     if (!activeCv) return;
 
-    if (format === 'print') {
-      const isSandboxedIframe = typeof window !== 'undefined' && window.self !== window.top;
-      if (isSandboxedIframe) {
-        // Sandboxed iframe lacks 'allow-modals' and ignores window.print()
-        // Provide the direct PDF download seamlessly
-        setIsExporting('pdf');
-        await exportDirectPdf(activeCv);
-        setIsExporting(null);
-      } else {
-        triggerPrint(activeCv);
-      }
-    } else if (format === 'pdf') {
+    if (format === 'pdf') {
       setIsExporting('pdf');
-      await exportDirectPdf(activeCv);
+      await exportDirectPdf(activeCv, {
+        showHeaderFooter: showPdfHeaderFooter,
+        showFooter: showPdfHeaderFooter
+      });
       setIsExporting(null);
     } else if (format === 'docx') {
       setIsExporting('docx');
@@ -228,8 +260,6 @@ export default function App() {
         return 'PDF Document (.pdf)';
       case 'docx':
         return 'Microsoft Word (.docx)';
-      case 'print':
-        return 'Print / Save as PDF';
       case 'html':
         return 'Web Page (.html)';
       case 'json':
@@ -244,8 +274,6 @@ export default function App() {
       return <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />;
     }
     switch (fmt) {
-      case 'print':
-        return <Printer className="w-3.5 h-3.5 text-indigo-600" />;
       case 'pdf':
         return <Download className="w-3.5 h-3.5 text-rose-600" />;
       case 'docx':
@@ -255,7 +283,7 @@ export default function App() {
       case 'json':
         return <Download className="w-3.5 h-3.5 text-slate-500" />;
       default:
-        return <Printer className="w-3.5 h-3.5 text-indigo-600" />;
+        return <Download className="w-3.5 h-3.5 text-rose-600" />;
     }
   };
 
@@ -270,9 +298,24 @@ export default function App() {
           onStartSample={() => handleCreateNew(true)}
           onOpenDashboard={() => setIsDashboardOpen(true)}
           onSelectTemplateToStart={(tplId: string) => handleCreateFromTemplate(tplId)}
+          onPreviewTemplate={handlePreviewTemplateFromHome}
         />
 
         {/* Modals accessible from Home */}
+        <TemplatePickerModal
+          isOpen={isTemplatesOpen}
+          onClose={() => setIsTemplatesOpen(false)}
+          cv={activeCv}
+          onLoadSampleProfile={handleLoadAlexanderWrightSample}
+          onSelectTemplate={(templateId, themeColor) =>
+            handleUpdateCv({
+              ...activeCv,
+              templateId,
+              ...(themeColor ? { themeColor } : {})
+            })
+          }
+        />
+
         <CvDashboardModal
           isOpen={isDashboardOpen}
           onClose={() => setIsDashboardOpen(false)}
@@ -497,29 +540,6 @@ export default function App() {
                           Select Download Format
                         </div>
 
-                        {/* Print */}
-                        <button
-                          onClick={() => handleSelectAndExport('print')}
-                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
-                            exportFormat === 'print'
-                              ? 'bg-indigo-50 text-indigo-700 font-bold'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <Printer className="w-4 h-4 text-indigo-600 shrink-0" />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span>Print Document</span>
-                              <span className="text-[10px] px-1.5 py-0.2 bg-indigo-100 text-indigo-700 rounded font-semibold">
-                                Default
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-normal">
-                              Native system print dialog or direct save to PDF
-                            </div>
-                          </div>
-                        </button>
-
                         {/* PDF */}
                         <button
                           onClick={() => handleSelectAndExport('pdf')}
@@ -531,7 +551,12 @@ export default function App() {
                         >
                           <Download className="w-4 h-4 text-rose-600 shrink-0" />
                           <div className="flex-1">
-                            <div className="font-bold">PDF Document (.pdf)</div>
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold">PDF Document (.pdf)</span>
+                              <span className="text-[10px] px-1.5 py-0.2 bg-indigo-100 text-indigo-700 rounded font-semibold">
+                                Default
+                              </span>
+                            </div>
                             <div className="text-[10px] text-slate-400 font-normal">
                               Direct A4 PDF download matching current layout
                             </div>
@@ -591,10 +616,47 @@ export default function App() {
                             </div>
                           </div>
                         </button>
+
+                        {/* PDF Header & Footer Toggle Option */}
+                        <div className="pt-2 mt-1 border-t border-slate-100 px-3 py-2 flex items-center justify-between bg-slate-50/50 rounded-b-xl">
+                          <div>
+                            <div className="text-xs font-semibold text-slate-700">Header &amp; Footer on PDF</div>
+                            <div className="text-[10px] text-slate-400">Page headers, numbers &amp; candidate name</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePdfHeaderFooter(!showPdfHeaderFooter)}
+                            className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer border ${
+                              showPdfHeaderFooter
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                            }`}
+                            title="Toggle header & footer on downloaded PDF"
+                          >
+                            {showPdfHeaderFooter ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
                       </div>
                     </>
                   )}
                 </div>
+
+                {/* PDF Header & Footer Quick Toggle */}
+                <button
+                  type="button"
+                  onClick={() => handleTogglePdfHeaderFooter(!showPdfHeaderFooter)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
+                    showPdfHeaderFooter
+                      ? 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 shadow-2xs'
+                      : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200/70'
+                  }`}
+                  title={`PDF Header & Footer is currently ${showPdfHeaderFooter ? 'ON' : 'OFF'}. Click to toggle.`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${showPdfHeaderFooter ? 'bg-indigo-600' : 'bg-slate-400'}`} />
+                  <span className="hidden sm:inline">Header &amp; Footer:</span>
+                  <span className="sm:hidden">H&amp;F:</span>
+                  <strong>{showPdfHeaderFooter ? 'ON' : 'OFF'}</strong>
+                </button>
 
                 {/* Direct Trigger Action Button */}
                 <button
@@ -608,11 +670,6 @@ export default function App() {
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>Exporting...</span>
-                    </>
-                  ) : exportFormat === 'print' ? (
-                    <>
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Print Now</span>
                     </>
                   ) : exportFormat === 'pdf' ? (
                     <>
@@ -688,6 +745,7 @@ export default function App() {
                   onOpenPhrases={() => setIsPhrasesOpen(true)}
                   onOpenAi={() => setIsAiOpen(true)}
                   onOpenTemplates={() => setIsTemplatesOpen(true)}
+                  onLoadSample={handleLoadAlexanderWrightSample}
                 />
               </div>
             )}
@@ -707,6 +765,11 @@ export default function App() {
                 onOpenTemplates={() => setIsTemplatesOpen(true)}
                 onSwitchToEditor={() => setLayoutMode('editor')}
                 onUpdateThemeColor={(color) => handleUpdateCv({ ...activeCv, themeColor: color })}
+                showPdfHeaderFooter={showPdfHeaderFooter}
+                onTogglePdfHeaderFooter={handleTogglePdfHeaderFooter}
+                showPdfFooter={showPdfHeaderFooter}
+                onTogglePdfFooter={handleTogglePdfHeaderFooter}
+                onLoadSample={handleLoadAlexanderWrightSample}
               />
             </div>
           </div>
@@ -728,7 +791,7 @@ export default function App() {
             </a>
             <span className="text-slate-300">•</span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Alpha v0.1.0
+              Alpha v0.2.0
             </span>
           </div>
         </div>
@@ -739,6 +802,7 @@ export default function App() {
         isOpen={isTemplatesOpen}
         onClose={() => setIsTemplatesOpen(false)}
         cv={activeCv}
+        onLoadSampleProfile={handleLoadAlexanderWrightSample}
         onSelectTemplate={(templateId, themeColor) =>
           handleUpdateCv({
             ...activeCv,

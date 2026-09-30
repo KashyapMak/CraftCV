@@ -27,15 +27,20 @@ Most commercial CV builders entice users with free editing, only to demand recur
 
 ## ✨ Features
 
-### 📄 8 Recruiter-Tested ATS Templates
-1. **Modern Executive**: Dual-column layout with clean header accents, ideal for corporate leadership and managers.
-2. **Edinburgh Timeline**: Vertical connecting timeline with visual milestone nodes for work history and education.
-3. **Cambridge Accent**: Modern geometric banner with monogram avatar, categorized skill tags, and clean card dividers.
-4. **Minimalist Clean**: Typography-driven, high-whitespace format for maximum readability and clean scanning.
-5. **London Corporate**: Formal executive presentation with high-contrast header card and structured sections.
-6. **Tech Compact**: Space-optimized format tailored for software engineers, devops, data scientists, and technical specialists.
-7. **Creative Split**: Fixed sidebar layout with high-impact color blocking for designers and creative roles.
-8. **Academic Classic**: Traditional serif layout formatted for university faculty, researchers, scholars, and medical professionals.
+### 📄 13 Recruiter-Tested ATS Templates
+1. **Sandstone Executive** (*Corporate*): Warm sand accent block, top-right portrait, 4-point contact pill matrix, dual-column structure, and grounded accent footer.
+2. **Geneva Grid** (*Modern*): High-fashion architectural grid with circular framed avatar, two-tone header typography, and crisp continuous border separators.
+3. **Botanical Terracotta** (*Creative*): Warm ivory cream aesthetic with soft sage curved pill sidebar, terracotta serif typography, and connected career timeline node bullets.
+4. **Nordic Contrast** (*Modern*): Full-bleed deep slate/navy left sidebar with circular portrait, contrasted against an organized tabular timeline with left-aligned date columns.
+5. **Silicon Accent** (*Tech*): Developer layout featuring a signature vibrant lime role badge, left avatar, vertical callout summary bar, and milestone education rail.
+6. **Modern Executive** (*Modern*): Clean dual-column layout with bold header accents and organized experience cards.
+7. **Edinburgh Timeline** (*Modern*): Unbroken vertical timeline rail with node bullets connecting all career milestones.
+8. **Cambridge Accent** (*Creative*): Modern color accent header with monogram avatar initials, categorized skill tags, and clean card dividers.
+9. **Minimalist Clean** (*Minimalist*): Distraction-free typography-first design with high whitespace balance. Maximum ATS readability.
+10. **London Corporate** (*Corporate*): Traditional UK executive format with polished header banner, structured divider cards, and contact block.
+11. **Creative Split** (*Creative*): Striking split-tone sidebar layout with high-impact color blocking for designers and creative roles.
+12. **Tech Compact** (*Tech*): High-density technical resume layout with skill chips, GitHub/live links, and bullet metrics.
+13. **Academic Classic** (*Academic*): Traditional serif layout formatted for university faculty, researchers, scholars, and medical professionals.
 
 ### 🎨 Color Themes & Typography
 - **Interactive Color Palette**: Choose from template-recommended accent colors, popular presets, or pick any hex color using the integrated color picker.
@@ -174,7 +179,7 @@ This project is open-source and available under the [MIT License](LICENSE).
 
 <div align="center">
 
-**CraftCV Pro** • Version Alpha 0.1.0  
+**CraftCV Pro** • Version Alpha 0.2.0  
 *100% Free Forever • Zero Subscriptions • Complete Client-Side Privacy*  
 🌐 [Live Demo](https://kashyapmak.github.io/CraftCV/) • 📦 [Repository](https://github.com/kashyapmak/CraftCV)
 

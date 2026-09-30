@@ -56,7 +56,10 @@ export const triggerPrint = (fallbackCv?: CVData): void => {
  * Direct PDF Download
  * Captures the exact rendered HTML layout matching the selected template and downloads high-res PDF file
  */
-export const exportDirectPdf = async (cv: CVData): Promise<{ success: boolean; error?: string }> => {
+export const exportDirectPdf = async (
+  cv: CVData,
+  options?: { showHeaderFooter?: boolean; showFooter?: boolean }
+): Promise<{ success: boolean; error?: string }> => {
   try {
     // 1. Look for dedicated clean, unscaled export sheets first
     let pageSheets = Array.from(
@@ -94,6 +97,18 @@ export const exportDirectPdf = async (cv: CVData): Promise<{ success: boolean; e
         clone.style.display = 'flex';
         clone.style.visibility = 'visible';
         clone.style.opacity = '1';
+
+        // Strip headers and footers if showHeaderFooter / showFooter option is false
+        const shouldStripHeaderFooter =
+          options?.showHeaderFooter === false || options?.showFooter === false;
+
+        if (shouldStripHeaderFooter) {
+          const headersAndFooters = clone.querySelectorAll<HTMLElement>(
+            '.cv-pdf-header, .cv-page-header, .cv-pdf-footer, .cv-page-footer'
+          );
+          headersAndFooters.forEach((el) => el.remove());
+        }
+
         document.body.appendChild(clone);
 
         try {
@@ -298,11 +313,16 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         .map((h) => `<li style="font-size: 10pt; color: #334155; margin-bottom: 3px;">${escapeHtml(h)}</li>`)
         .join('');
 
+      const descHtml = proj.description
+        ? `<div style="font-size: 10pt; color: #334155; margin-top: 4px; white-space: pre-line; line-height: 1.45;">${escapeHtml(proj.description).replace(/\n/g, '<br/>')}</div>`
+        : '';
+
       return `
         <div style="margin-bottom: 12px; ${itemStyle}">
           <p style="font-size: 11pt; font-weight: bold; color: #0f172a; margin: 0;">
             ${escapeHtml(proj.title)}${proj.subtitle ? ` — <span style="color: ${theme};">${escapeHtml(proj.subtitle)}</span>` : ''}
           </p>
+          ${descHtml}
           ${bullets ? `<ul style="margin: 4px 0 0 0; padding-left: 18px;">${bullets}</ul>` : ''}
         </div>
       `;
@@ -1298,6 +1318,27 @@ export const buildDocxDocument = (cv: CVData): Document => {
         );
       }
 
+      if (proj.description) {
+        const descLines = proj.description.split('\n');
+        descLines.forEach((line) => {
+          if (line.trim()) {
+            children.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: line,
+                    size: 19,
+                    color: '334155',
+                    font,
+                  }),
+                ],
+                spacing: { after: 35 },
+              })
+            );
+          }
+        });
+      }
+
       (proj.highlights || [])
         .filter((h) => h && h.trim())
         .forEach((hl) => {
@@ -1732,18 +1773,50 @@ export const exportStandaloneHtml = (cv: CVData, renderedTemplateHtml: string): 
       size: A4 portrait;
       margin: 8mm;
     }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    .cv-container {
+      width: 210mm;
+      max-width: 210mm;
+      min-height: 297mm;
+    }
+    /* Fixed column styles to ensure zero layout shift in both screen and print */
+    .grid { display: grid; }
+    .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    .col-span-2 { grid-column: span 2 / span 2 !important; }
+    .col-span-1 { grid-column: span 1 / span 1 !important; }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
     @media print {
-      body {
+      html, body {
         background: white !important;
         padding: 0 !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       .no-print {
         display: none !important;
       }
       .cv-container {
         box-shadow: none !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         width: 100% !important;
+        max-width: 100% !important;
+      }
+      .grid.grid-cols-3, .grid-cols-3 {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+      .col-span-2 {
+        grid-column: span 2 / span 2 !important;
+      }
+      .col-span-1 {
+        grid-column: span 1 / span 1 !important;
+      }
+      .grid.grid-cols-2, .grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
     }
   </style>

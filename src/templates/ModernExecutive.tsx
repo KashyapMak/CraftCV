@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 import { Mail, Phone, MapPin, Globe, Linkedin, Github } from 'lucide-react';
 
 interface Props {
@@ -11,7 +12,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
   const theme = cv.themeColor || '#2563eb';
 
   return (
-    <div className="w-full bg-white text-slate-800 p-8 sm:p-10 leading-relaxed font-sans">
+    <div className="w-full bg-white text-slate-800 p-8 leading-relaxed font-sans">
       {/* Header */}
       <header className="border-b-2 pb-6 mb-6" style={{ borderColor: theme }}>
         <div className="flex justify-between items-center gap-4">
@@ -82,7 +83,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
             className="text-xs font-bold uppercase tracking-wider mb-2 pb-1 border-b flex items-center gap-2"
             style={{ color: theme, borderColor: '#e2e8f0' }}
           >
-            <span>Professional Summary</span>
+            <span>{getSectionTitle(cv, 'summary', 'Professional Summary')}</span>
           </h2>
           <p className="text-sm text-slate-700 leading-normal text-justify">
             {cv.summary}
@@ -90,10 +91,10 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
         </section>
       )}
 
-      {/* Dual Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Dual Column Layout - Fixed 3-column A4 grid preventing merge on print */}
+      <div className="grid grid-cols-3 gap-6">
         {/* Main Column (2 spans): Experience & Education */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="col-span-2 space-y-6">
           {/* Experience */}
           {cv.experiences.length > 0 && (
             <section>
@@ -101,7 +102,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b"
                 style={{ color: theme, borderColor: '#e2e8f0' }}
               >
-                Work Experience
+                {getSectionTitle(cv, 'experience', 'Work Experience')}
               </h2>
               <div className="space-y-4">
                 {cv.experiences.map((exp) => (
@@ -141,7 +142,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b"
                 style={{ color: theme, borderColor: '#e2e8f0' }}
               >
-                Education
+                {getSectionTitle(cv, 'education', 'Education')}
               </h2>
               <div className="space-y-3">
                 {cv.educations.map((edu) => (
@@ -182,7 +183,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b"
                 style={{ color: theme, borderColor: '#e2e8f0' }}
               >
-                Key Projects
+                {getSectionTitle(cv, 'projects', 'Key Projects')}
               </h2>
               <div className="space-y-3">
                 {cv.projects.map((proj) => (
@@ -203,6 +204,11 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                     {proj.link && (
                       <div className="text-[11px] text-indigo-600 font-medium">{proj.link}</div>
                     )}
+                    {proj.description && (
+                      <p className="mt-1 text-xs text-slate-700 leading-relaxed whitespace-pre-line">
+                        {proj.description}
+                      </p>
+                    )}
                     {proj.highlights && proj.highlights.length > 0 && (
                       <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5 text-xs text-slate-700">
                         {proj.highlights.map((h, idx) => (
@@ -218,7 +224,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
         </div>
 
         {/* Sidebar Column (1 span): Skills, Certs, Languages */}
-        <div className="space-y-5">
+        <div className="col-span-1 space-y-5">
           {/* Skills */}
           {cv.skills.length > 0 && (
             <section className="break-inside-avoid">
@@ -226,7 +232,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-bold uppercase tracking-wider mb-2 pb-1 border-b"
                 style={{ color: theme, borderColor: '#e2e8f0' }}
               >
-                Key Skills
+                {getSectionTitle(cv, 'skills', 'Key Skills')}
               </h2>
               <div className="space-y-3">
                 {cv.skills.map((skillGroup) => (
@@ -257,7 +263,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-bold uppercase tracking-wider mb-2 pb-1 border-b"
                 style={{ color: theme, borderColor: '#e2e8f0' }}
               >
-                Certifications
+                {getSectionTitle(cv, 'certifications', 'Certifications')}
               </h2>
               <div className="space-y-2">
                 {cv.certifications.map((cert) => (
@@ -279,7 +285,7 @@ export const ModernExecutiveTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-bold uppercase tracking-wider mb-2 pb-1 border-b"
                 style={{ color: theme, borderColor: '#e2e8f0' }}
               >
-                Languages
+                {getSectionTitle(cv, 'languages', 'Languages')}
               </h2>
               <div className="space-y-1.5">
                 {cv.languages.map((l) => (

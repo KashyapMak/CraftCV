@@ -14,7 +14,8 @@ import {
   LayoutTemplate,
   Check,
   CreditCard,
-  Ban
+  Ban,
+  Eye
 } from 'lucide-react';
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
   onStartSample: () => void;
   onSelectTemplateToStart: (templateId: string) => void;
   onOpenDashboard: () => void;
+  onPreviewTemplate?: (templateId: string) => void;
 }
 
 export const HomePage: React.FC<Props> = ({
@@ -32,7 +34,8 @@ export const HomePage: React.FC<Props> = ({
   onStartBlank,
   onStartSample,
   onSelectTemplateToStart,
-  onOpenDashboard
+  onOpenDashboard,
+  onPreviewTemplate
 }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-800 flex flex-col font-sans">
@@ -92,7 +95,7 @@ export const HomePage: React.FC<Props> = ({
           </h1>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
-            Unlike other resume builders that lure you in with free editing only to demand £15–£25/month when you try to download, CraftCV PRO is completely free to use. Build, customize, and export high-resolution <strong>PDF, native Word (.docx), and Print</strong> with zero subscriptions, zero hidden fees, and zero watermarks.
+            Unlike other resume builders that lure you in with free editing only to demand £15–£25/month when you try to download, CraftCV PRO is completely free to use. Build, customize, and export high-resolution <strong>PDF, native Word (.docx), and standalone HTML</strong> with zero subscriptions, zero hidden fees, and zero watermarks.
           </p>
 
           {/* CTA Buttons */}
@@ -181,7 +184,7 @@ export const HomePage: React.FC<Props> = ({
                 </div>
                 <h3 className="text-base font-bold text-slate-900">No Download Paywall</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Download as many times as you need in vector PDF, editable Microsoft Word (.docx), and clean Print. No artificial limits or single-download paywalls.
+                  Download as many times as you need in vector PDF, editable Microsoft Word (.docx), and standalone HTML. No artificial limits or single-download paywalls.
                 </p>
               </div>
               <div className="pt-3 border-t border-slate-100">
@@ -270,9 +273,9 @@ export const HomePage: React.FC<Props> = ({
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <FileDown className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Direct Export (Print, PDF, Word)</h3>
+              <h3 className="text-base font-bold text-slate-900">Direct Export (PDF, Word, HTML)</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Download your CV in native Microsoft Word (.docx), download direct high-resolution PDFs with proper page margins, or print cleanly with zero watermark or surprise paywalls.
+                Download your CV in direct high-resolution PDFs with page footer and margin controls, native Microsoft Word (.docx), or standalone HTML with zero watermark or surprise paywalls.
               </p>
             </div>
 
@@ -370,9 +373,25 @@ export const HomePage: React.FC<Props> = ({
                       />
                     ))}
                   </div>
-                  <span className="font-bold text-indigo-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Use Layout →
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {onPreviewTemplate && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPreviewTemplate(tmpl.id);
+                        }}
+                        className="text-[11px] font-bold text-slate-600 hover:text-indigo-600 px-2 py-1 rounded hover:bg-slate-100 transition cursor-pointer flex items-center gap-1"
+                        title="Preview this layout with Alexander Wright's complete sample JSON profile"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Preview</span>
+                      </button>
+                    )}
+                    <span className="font-bold text-indigo-600 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      Use Layout →
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

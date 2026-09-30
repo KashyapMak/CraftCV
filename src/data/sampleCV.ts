@@ -1,224 +1,180 @@
 import { CVData } from '../types/cv';
+import sampleCvJson from './sampleCV.json';
 
-export const SAMPLE_CV: CVData = {
-  id: 'cv_sample_alexander_wright',
-  title: 'Senior Software Engineer (FinTech & Cloud)',
-  createdAt: Date.now() - 86400000 * 5,
-  updatedAt: Date.now(),
-  templateId: 'modern-executive',
-  themeColor: '#2563eb',
-  fontFamily: 'inter',
-  fontSize: 'base',
-  lineSpacing: 'normal',
-  showPhoto: false,
-  personalDetails: {
-    fullName: 'Alexander Wright',
-    jobTitle: 'Senior Full Stack Software Engineer',
-    email: 'alexander.wright@example.co.uk',
-    phone: '+44 7700 900821',
-    location: 'London, United Kingdom',
-    linkedin: 'linkedin.com/in/alexander-wright-dev',
-    website: 'alexwright.dev',
-    github: 'github.com/alexwright'
-  },
-  summary: 'Passionate and results-driven Senior Full Stack Engineer with 7+ years of experience engineering high-throughput distributed systems, scalable microservices, and modern web applications in FinTech. Proven track record of reducing latency by 45%, leading cross-functional teams of 8+ engineers, and delivering mission-critical payment processing engines with 99.99% availability.',
-  experiences: [
-    {
-      id: 'exp_1',
-      jobTitle: 'Lead Software Engineer',
-      employer: 'Apex Financial Technologies',
-      location: 'London, UK',
-      startDate: '2022-03',
-      endDate: '',
-      isCurrent: true,
-      highlights: [
-        'Architected and deployed a multi-tenant payment gateway processing over £15M in daily transactions with 99.99% uptime.',
-        'Migrated legacy monolithic billing engine to event-driven microservices using TypeScript, Node.js, and Apache Kafka, reducing checkout latency by 45%.',
-        'Spearheaded the technical roadmap, leading a squad of 8 software and QA engineers across two-week Agile delivery cycles.',
-        'Instituted automated unit, integration, and security test suites, decreasing post-release bug reports by 38%.'
-      ]
-    },
-    {
-      id: 'exp_2',
-      jobTitle: 'Senior Full Stack Developer',
-      employer: 'NovaCloud Solutions',
-      location: 'Bristol, UK',
-      startDate: '2019-06',
-      endDate: '2022-02',
-      isCurrent: false,
-      highlights: [
-        'Designed intuitive customer self-serve analytics dashboards using React, Next.js, and Tailwind CSS, increasing monthly platform engagement by 32%.',
-        'Implemented PostgreSQL database partitioning and Redis caching layer, optimizing complex reporting query times from 4.2s down to 310ms.',
-        'Automated CI/CD deployment pipelines on AWS (ECS, RDS, S3) with GitHub Actions, accelerating release cycles from bi-weekly to daily.'
-      ]
-    },
-    {
-      id: 'exp_3',
-      jobTitle: 'Software Engineer',
-      employer: 'Hyperion Labs',
-      location: 'Cambridge, UK',
-      startDate: '2017-09',
-      endDate: '2019-05',
-      isCurrent: false,
-      highlights: [
-        'Developed RESTful APIs and internal tooling for customer onboarding, cutting account provisioning time by 60%.',
-        'Refactored frontend codebase to modern TypeScript and state management patterns, improving Lighthouse performance score from 64 to 98.'
-      ]
-    }
-  ],
-  educations: [
-    {
-      id: 'edu_1',
-      school: 'University of Bristol',
-      degree: 'BSc (Hons) Computer Science',
-      fieldOfStudy: 'First Class Honours (1st)',
-      location: 'Bristol, UK',
-      startDate: '2014-09',
-      endDate: '2017-06',
-      isCurrent: false,
-      grade: 'First Class Honours',
-      details: [
-        'Dissertation: Distributed Consensus Mechanisms for High-Frequency Transaction Ledgers (Grade: 88%)',
-        'Dean’s List for Academic Excellence (2015, 2016, 2017)'
-      ]
-    }
-  ],
-  skills: [
-    {
-      id: 'skill_cat_1',
-      category: 'Languages & Core',
-      items: ['TypeScript', 'JavaScript (ES6+)', 'Node.js', 'Python', 'SQL', 'HTML5 & CSS3']
-    },
-    {
-      id: 'skill_cat_2',
-      category: 'Frameworks & Libraries',
-      items: ['React 19', 'Next.js', 'Express', 'Tailwind CSS', 'GraphQL', 'Redux / Zustand']
-    },
-    {
-      id: 'skill_cat_3',
-      category: 'Cloud & DevOps',
-      items: ['AWS (ECS, Lambda, RDS, S3)', 'Docker', 'Kubernetes', 'CI/CD (GitHub Actions)', 'Kafka', 'Redis']
-    },
-    {
-      id: 'skill_cat_4',
-      category: 'Practices & Methodologies',
-      items: ['System Architecture', 'Microservices', 'TDD / Jest', 'Agile / Scrum', 'REST APIs', 'Performance Optimization']
-    }
-  ],
-  projects: [
-    {
-      id: 'proj_1',
-      title: 'LedgerFlow - Open Source Banking API Sandbox',
-      subtitle: 'TypeScript, Next.js, PostgreSQL',
-      link: 'ledgerflow.dev',
-      startDate: '2023',
-      endDate: 'Present',
-      highlights: [
-        'Built an open-source sandbox simulation of UK Open Banking APIs with over 1,200 GitHub stars and 50+ community contributors.',
-        'Featured in British Tech Weekly as a top open-source financial development tool.'
-      ]
-    }
-  ],
-  certifications: [
-    {
-      id: 'cert_1',
-      name: 'AWS Certified Solutions Architect – Associate',
-      issuer: 'Amazon Web Services (AWS)',
-      issueDate: '2023',
-      credentialUrl: 'aws.amazon.com/verification'
-    },
-    {
-      id: 'cert_2',
-      name: 'Certified ScrumMaster (CSM)',
-      issuer: 'Scrum Alliance',
-      issueDate: '2022'
-    }
-  ],
-  languages: [
-    {
-      id: 'lang_1',
-      language: 'English',
-      proficiency: 'Native'
-    },
-    {
-      id: 'lang_2',
-      language: 'French',
-      proficiency: 'Intermediate'
-    }
-  ],
-  customSections: [
-    {
-      id: 'custom_1',
-      sectionTitle: 'Key Achievements & Awards',
-      items: [
-        {
-          id: 'item_1',
-          title: 'FinTech UK Innovation Award Winner',
-          subtitle: 'Apex Financial Technologies',
-          date: '2024',
-          description: 'Recognized for building the lowest-latency transaction routing protocol in the European mid-market sector.'
-        }
-      ]
-    }
-  ]
+/**
+ * Alexander Wright's complete, recruiter-approved sample CV profile
+ * loaded directly from the system JSON specification.
+ */
+export const ALEXANDER_WRIGHT_SAMPLE_CV: CVData = sampleCvJson as CVData;
+
+export const SAMPLE_CV: CVData = ALEXANDER_WRIGHT_SAMPLE_CV;
+
+/**
+ * Checks whether a candidate CV is empty / untouched / unpopulated.
+ * Returns true if the user has not entered their own candidate name yet.
+ */
+export const isCvEmpty = (cv?: CVData | null): boolean => {
+  if (!cv) return true;
+  const fullName = cv.personalDetails?.fullName?.trim() || '';
+  return !fullName;
 };
 
-export const createBlankCV = (indexNumber = 1): CVData => ({
-  id: `cv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-  title: `Untitled CV ${indexNumber}`,
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
-  templateId: 'modern-executive',
-  themeColor: '#2563eb',
-  fontFamily: 'inter',
-  fontSize: 'base',
-  lineSpacing: 'normal',
-  showPhoto: false,
-  personalDetails: {
-    fullName: '',
-    jobTitle: '',
-    email: '',
-    phone: '',
-    location: '',
-    linkedin: '',
-    website: '',
-    github: ''
-  },
-  summary: '',
-  experiences: [
-    {
-      id: `exp_${Date.now()}`,
+/**
+ * Returns the effective CV to preview for templates.
+ * If the user has not entered or selected their own CV, Alexander Wright's profile is used automatically.
+ */
+export const getPreviewCvWithFallback = (
+  cv: CVData | null | undefined,
+  templateId?: string,
+  themeColor?: string,
+  forceSample = false
+): { previewCv: CVData; isUsingSample: boolean } => {
+  const empty = isCvEmpty(cv);
+  const useSample = forceSample || empty;
+
+  const base = useSample ? ALEXANDER_WRIGHT_SAMPLE_CV : (cv as CVData);
+  const previewCv: CVData = {
+    ...base,
+    templateId: templateId || base.templateId || 'modern-executive',
+    themeColor: themeColor || base.themeColor || '#2563eb'
+  };
+
+  return {
+    previewCv,
+    isUsingSample: useSample
+  };
+};
+
+/**
+ * Creates a blank CV with structured items and sample guides in every section
+ * (including Custom Sections, Projects, Certifications, Languages, Skills, and Section Titles)
+ * so the user immediately gets a clear blueprint of how to populate each section.
+ */
+export const createBlankCV = (indexNumber = 1): CVData => {
+  const now = Date.now();
+  return {
+    id: `cv_${now}_${Math.random().toString(36).substring(2, 7)}`,
+    title: `Untitled CV ${indexNumber}`,
+    createdAt: now,
+    updatedAt: now,
+    templateId: 'modern-executive',
+    themeColor: '#2563eb',
+    fontFamily: 'inter',
+    fontSize: 'base',
+    lineSpacing: 'normal',
+    showPhoto: false,
+    sectionTitles: {
+      summary: 'Professional Summary',
+      experience: 'Work Experience',
+      education: 'Education',
+      skills: 'Key Skills',
+      projects: 'Key Projects',
+      certifications: 'Certifications',
+      languages: 'Languages'
+    },
+    personalDetails: {
+      fullName: '',
       jobTitle: '',
-      employer: '',
+      email: '',
+      phone: '',
       location: '',
-      startDate: '',
-      endDate: '',
-      isCurrent: true,
-      highlights: ['']
-    }
-  ],
-  educations: [
-    {
-      id: `edu_${Date.now()}`,
-      school: '',
-      degree: '',
-      fieldOfStudy: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      isCurrent: false,
-      details: []
-    }
-  ],
-  skills: [
-    {
-      id: `cat_${Date.now()}`,
-      category: 'Key Skills',
-      items: []
-    }
-  ],
-  projects: [],
-  certifications: [],
-  languages: [],
-  customSections: []
-});
+      linkedin: '',
+      website: '',
+      github: ''
+    },
+    summary: '',
+    experiences: [
+      {
+        id: `exp_${now}`,
+        jobTitle: '',
+        employer: '',
+        location: '',
+        startDate: '',
+        endDate: '',
+        isCurrent: true,
+        highlights: [
+          'Led key strategic initiatives delivering measurable performance improvements.',
+          'Collaborated with cross-functional teams to engineer and deploy core features.'
+        ]
+      }
+    ],
+    educations: [
+      {
+        id: `edu_${now}`,
+        school: '',
+        degree: '',
+        fieldOfStudy: '',
+        location: '',
+        startDate: '',
+        endDate: '',
+        isCurrent: false,
+        grade: '',
+        details: [
+          'Relevant coursework or notable academic achievements'
+        ]
+      }
+    ],
+    skills: [
+      {
+        id: `cat_${now}_1`,
+        category: 'Core Competencies',
+        items: ['System Architecture', 'Problem Solving', 'Team Leadership', 'Project Delivery']
+      },
+      {
+        id: `cat_${now}_2`,
+        category: 'Technical & Tools',
+        items: ['TypeScript / JavaScript', 'React & Modern Web', 'API Design & Integration', 'Cloud Platforms']
+      }
+    ],
+    projects: [
+      {
+        id: `proj_${now}`,
+        title: 'Featured Project Name',
+        subtitle: 'React, TypeScript, Cloud Architecture',
+        link: 'project-link.dev',
+        startDate: '2023',
+        endDate: 'Present',
+        description: 'High-impact overview of the project scope, technical solutions engineered, and delivered business or performance metrics.',
+        highlights: [
+          'Key technical milestone, architectural decision, or measurable improvement'
+        ]
+      }
+    ],
+    certifications: [
+      {
+        id: `cert_${now}`,
+        name: 'Certification Title (e.g. AWS Solutions Architect)',
+        issuer: 'Issuing Organization (e.g. Amazon Web Services)',
+        issueDate: '2024',
+        credentialUrl: 'credential.net/verify'
+      }
+    ],
+    languages: [
+      {
+        id: `lang_${now}_1`,
+        language: 'English',
+        proficiency: 'Native'
+      },
+      {
+        id: `lang_${now}_2`,
+        language: 'Second Language (e.g. French / Spanish / German)',
+        proficiency: 'Intermediate'
+      }
+    ],
+    customSections: [
+      {
+        id: `custom_${now}`,
+        sectionTitle: 'Key Achievements & Awards',
+        items: [
+          {
+            id: `item_${now}`,
+            title: 'Award / Publication / Key Honor',
+            subtitle: 'Issuing Organization / Institution',
+            date: '2024',
+            description: 'Description of the notable achievement, recognition, key project result, or milestone.'
+          }
+        ]
+      }
+    ]
+  };
+};

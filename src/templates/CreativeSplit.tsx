@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 import { Mail, Phone, MapPin, Globe, Linkedin, Github } from 'lucide-react';
 
 interface Props {
@@ -86,7 +87,7 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
           {cv.skills.length > 0 && (
             <div className="space-y-3">
               <div className="text-[11px] font-bold uppercase tracking-wider text-white/60 border-b border-white/20 pb-1">
-                Expertise
+                {getSectionTitle(cv, 'skills', 'Expertise')}
               </div>
               {cv.skills.map((sg) => (
                 <div key={sg.id} className="text-xs">
@@ -106,11 +107,28 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
             </div>
           )}
 
+          {/* Certifications in Sidebar */}
+          {cv.certifications && cv.certifications.length > 0 && (
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-white/60 border-b border-white/20 pb-1 mb-2">
+                {getSectionTitle(cv, 'certifications', 'Certifications')}
+              </div>
+              <div className="space-y-1.5 text-xs text-white/90">
+                {cv.certifications.map((c) => (
+                  <div key={c.id}>
+                    <div className="font-bold text-white">{c.name}</div>
+                    <div className="text-[10px] text-white/70">{c.issuer} ({c.issueDate})</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Languages in Sidebar */}
           {cv.languages && cv.languages.length > 0 && (
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wider text-white/60 border-b border-white/20 pb-1 mb-2">
-                Languages
+                {getSectionTitle(cv, 'languages', 'Languages')}
               </div>
               <div className="space-y-1 text-xs">
                 {cv.languages.map((l) => (
@@ -131,7 +149,7 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
         {cv.summary && (
           <section className="break-inside-avoid">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              About Me
+              {getSectionTitle(cv, 'summary', 'About Me')}
             </h2>
             <p className="text-xs text-slate-700 leading-relaxed text-justify">
               {cv.summary}
@@ -143,7 +161,7 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
         {cv.experiences.length > 0 && (
           <section>
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-              Experience
+              {getSectionTitle(cv, 'experience', 'Experience')}
             </h2>
             <div className="space-y-4">
               {cv.experiences.map((exp) => (
@@ -178,7 +196,7 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
         {cv.educations.length > 0 && (
           <section className="break-inside-avoid">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Education
+              {getSectionTitle(cv, 'education', 'Education')}
             </h2>
             <div className="space-y-2.5">
               {cv.educations.map((edu) => (
@@ -205,7 +223,7 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
         {cv.projects && cv.projects.length > 0 && (
           <section className="break-inside-avoid">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Projects & Portfolios
+              {getSectionTitle(cv, 'projects', 'Projects & Portfolios')}
             </h2>
             <div className="space-y-2.5">
               {cv.projects.map((proj) => (
@@ -215,6 +233,11 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
                     {proj.link && <span className="text-indigo-600 font-medium">{proj.link}</span>}
                   </div>
                   {proj.subtitle && <div className="text-slate-500 italic">{proj.subtitle}</div>}
+                  {proj.description && (
+                    <p className="mt-1 text-slate-700 leading-relaxed whitespace-pre-line">
+                      {proj.description}
+                    </p>
+                  )}
                   {proj.highlights && (
                     <ul className="list-disc list-outside ml-4 mt-1 text-slate-700 space-y-0.5">
                       {proj.highlights.map((h, i) => (
@@ -227,6 +250,29 @@ export const CreativeSplitTemplate: React.FC<Props> = ({ cv }) => {
             </div>
           </section>
         )}
+
+        {/* Custom Sections */}
+        {cv.customSections && cv.customSections.map((sec) => (
+          <section key={sec.id} className="break-inside-avoid">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+              {sec.sectionTitle}
+            </h2>
+            <div className="space-y-2.5">
+              {sec.items.map((item) => (
+                <div key={item.id} className="text-xs">
+                  <div className="flex justify-between font-bold text-slate-900">
+                    <span>{item.title}</span>
+                    {item.date && <span className="text-[11px] text-slate-500">{item.date}</span>}
+                  </div>
+                  {item.subtitle && <div className="text-slate-500 italic">{item.subtitle}</div>}
+                  {item.description && (
+                    <p className="mt-0.5 text-slate-700 leading-relaxed">{item.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

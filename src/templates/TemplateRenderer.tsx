@@ -8,6 +8,11 @@ import { TechCompactTemplate } from './TechCompact';
 import { AcademicClassicTemplate } from './AcademicClassic';
 import { EdinburghTimelineTemplate } from './EdinburghTimeline';
 import { CambridgeAccentTemplate } from './CambridgeAccent';
+import { SandstoneExecutiveTemplate } from './SandstoneExecutive';
+import { GenevaGridTemplate } from './GenevaGrid';
+import { BotanicalTerracottaTemplate } from './BotanicalTerracotta';
+import { NordicContrastTemplate } from './NordicContrast';
+import { SiliconAccentTemplate } from './SiliconAccent';
 
 interface Props {
   cv: CVData;
@@ -62,6 +67,16 @@ export const TemplateRenderer: React.FC<Props> = ({
 
   const renderSelectedTemplate = () => {
     switch (cv.templateId) {
+      case 'sandstone-executive':
+        return <SandstoneExecutiveTemplate cv={cv} />;
+      case 'geneva-grid':
+        return <GenevaGridTemplate cv={cv} />;
+      case 'botanical-terracotta':
+        return <BotanicalTerracottaTemplate cv={cv} />;
+      case 'nordic-contrast':
+        return <NordicContrastTemplate cv={cv} />;
+      case 'silicon-accent':
+        return <SiliconAccentTemplate cv={cv} />;
       case 'edinburgh-timeline':
         return <EdinburghTimelineTemplate cv={cv} />;
       case 'cambridge-accent':
