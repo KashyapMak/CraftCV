@@ -791,7 +791,7 @@ export default function App() {
             </a>
             <span className="text-slate-300">•</span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Alpha v0.2.0
+              Alpha v0.1.0
             </span>
           </div>
         </div>

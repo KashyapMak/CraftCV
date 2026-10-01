@@ -1397,6 +1397,7 @@ export const CvEditor: React.FC<Props> = ({
                 </div>
               ))}
             </div>
+            )}
 
             <div className="pt-4 flex justify-between">
               <button
@@ -2048,7 +2049,7 @@ export const CvEditor: React.FC<Props> = ({
                 onClick={onOpenTemplates}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-xs transition cursor-pointer"
               >
-                Browse All 6 Templates
+                Browse All 13 Templates
               </button>
             </div>
 

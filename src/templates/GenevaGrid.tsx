@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -74,7 +75,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
 
           <div className="md:col-span-8 p-4 md:pl-6">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
-              Summary
+              {getSectionTitle(cv, 'summary', 'Summary')}
             </h2>
             <p className="text-[11px] text-slate-700 leading-relaxed">
               {cv.summary || 'Detail-oriented professional with extensive experience leading strategic initiatives and driving sustainable organizational performance.'}
@@ -89,7 +90,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
             {cv.educations && cv.educations.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
-                  Education
+                  {getSectionTitle(cv, 'education', 'Education')}
                 </h2>
                 <div className="space-y-3">
                   {cv.educations.map((edu) => (
@@ -109,7 +110,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
             {cv.skills && cv.skills.length > 0 && (
               <div className="pt-4 border-t border-slate-200">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
-                  Skills
+                  {getSectionTitle(cv, 'skills', 'Skills')}
                 </h2>
                 <div className="space-y-2">
                   {cv.skills.map((cat) => (
@@ -138,7 +139,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
             {cv.experiences && cv.experiences.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">
-                  Work Experience
+                  {getSectionTitle(cv, 'experience', 'Work Experience')}
                 </h2>
                 <div className="space-y-4">
                   {cv.experiences.map((exp) => (
@@ -170,7 +171,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
             {cv.projects && cv.projects.length > 0 && (
               <div className="pt-4 border-t border-slate-200">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">
-                  Key Projects
+                  {getSectionTitle(cv, 'projects', 'Key Projects')}
                 </h2>
                 <div className="space-y-4">
                   {cv.projects.map((proj) => (
@@ -218,7 +219,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
             {cv.certifications && cv.certifications.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
-                  Certification
+                  {getSectionTitle(cv, 'certifications', 'Certification')}
                 </h2>
                 <ul className="space-y-1 text-[11px] text-slate-700">
                   {cv.certifications.map((c) => (
@@ -236,7 +237,7 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
             {cv.languages && cv.languages.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
-                  Languages
+                  {getSectionTitle(cv, 'languages', 'Languages')}
                 </h2>
                 <ul className="space-y-1 text-[11px] text-slate-700">
                   {cv.languages.map((l) => (
@@ -251,23 +252,35 @@ export const GenevaGridTemplate: React.FC<Props> = ({ cv }) => {
           </div>
 
           <div className="md:col-span-8 p-4 md:pl-6">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">
-              References & Additional Details
-            </h2>
             {cv.customSections && cv.customSections.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                {cv.customSections.flatMap((s) => s.items).map((item) => (
-                  <div key={item.id} className="text-[11px]">
-                    <div className="font-bold text-slate-900">{item.title}</div>
-                    {item.subtitle && <div className="text-slate-500">{item.subtitle}</div>}
-                    <div className="text-slate-600 mt-0.5 whitespace-pre-line">{item.description}</div>
+              <div className="space-y-4">
+                {cv.customSections.map((sec) => (
+                  <div key={sec.id}>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
+                      {sec.sectionTitle}
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      {sec.items.map((item) => (
+                        <div key={item.id} className="text-[11px]">
+                          <div className="font-bold text-slate-900">{item.title}</div>
+                          {item.subtitle && <div className="text-slate-500">{item.subtitle}</div>}
+                          {item.date && <div className="text-slate-400 text-[10px]">{item.date}</div>}
+                          <div className="text-slate-600 mt-0.5 whitespace-pre-line">{item.description}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-[11px] text-slate-500 italic">
-                Available upon request or provided through verified academic and professional registries.
-              </p>
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">
+                  References & Additional Details
+                </h2>
+                <p className="text-[11px] text-slate-500 italic">
+                  Available upon request or provided through verified academic and professional registries.
+                </p>
+              </div>
             )}
           </div>
         </div>

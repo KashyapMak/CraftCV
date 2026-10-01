@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -69,7 +70,7 @@ export const NordicContrastTemplate: React.FC<Props> = ({ cv }) => {
         {cv.skills && cv.skills.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-widest text-white/90 border-b border-white/10 pb-1">
-              Expertise
+              {getSectionTitle(cv, 'skills', 'Expertise')}
             </h2>
             <div className="space-y-2">
               {cv.skills.map((cat) => (
@@ -92,7 +93,7 @@ export const NordicContrastTemplate: React.FC<Props> = ({ cv }) => {
         {cv.languages && cv.languages.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-widest text-white/90 border-b border-white/10 pb-1">
-              Language
+              {getSectionTitle(cv, 'languages', 'Language')}
             </h2>
             <div className="space-y-1 text-[11px] text-white/80">
               {cv.languages.map((l) => (
@@ -109,7 +110,7 @@ export const NordicContrastTemplate: React.FC<Props> = ({ cv }) => {
         {cv.certifications && cv.certifications.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-widest text-white/90 border-b border-white/10 pb-1">
-              Awards & Certifications
+              {getSectionTitle(cv, 'certifications', 'Awards & Certifications')}
             </h2>
             <div className="space-y-2 text-[11px] text-white/80">
               {cv.certifications.map((c) => (
@@ -146,7 +147,7 @@ export const NordicContrastTemplate: React.FC<Props> = ({ cv }) => {
         {cv.experiences && cv.experiences.length > 0 && (
           <section className="break-inside-avoid border-t border-slate-200 pt-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">
-              Experience
+              {getSectionTitle(cv, 'experience', 'Experience')}
             </h2>
             <div className="space-y-5">
               {cv.experiences.map((exp) => (
@@ -181,7 +182,7 @@ export const NordicContrastTemplate: React.FC<Props> = ({ cv }) => {
         {cv.projects && cv.projects.length > 0 && (
           <section className="break-inside-avoid border-t border-slate-200 pt-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">
-              Key Projects
+              {getSectionTitle(cv, 'projects', 'Key Projects')}
             </h2>
             <div className="space-y-5">
               {cv.projects.map((proj) => (
@@ -226,7 +227,7 @@ export const NordicContrastTemplate: React.FC<Props> = ({ cv }) => {
         {cv.educations && cv.educations.length > 0 && (
           <section className="break-inside-avoid border-t border-slate-200 pt-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">
-              Education
+              {getSectionTitle(cv, 'education', 'Education')}
             </h2>
             <div className="space-y-4">
               {cv.educations.map((edu) => (

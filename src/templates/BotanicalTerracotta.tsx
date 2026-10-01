@@ -1,6 +1,7 @@
 import React from 'react';
 import { CVData } from '../types/cv';
 import { Sparkles } from 'lucide-react';
+import { getSectionTitle } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -68,7 +69,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
           {cv.skills && cv.skills.length > 0 && (
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-stone-700 pb-1 mb-2 border-b border-stone-300">
-                Core Skills
+                {getSectionTitle(cv, 'skills', 'Core Skills')}
               </h2>
               <div className="space-y-2">
                 {cv.skills.map((cat) => (
@@ -93,7 +94,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
           {cv.educations && cv.educations.length > 0 && (
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-stone-700 pb-1 mb-2 border-b border-stone-300">
-                Education
+                {getSectionTitle(cv, 'education', 'Education')}
               </h2>
               <div className="space-y-3">
                 {cv.educations.map((edu) => (
@@ -113,7 +114,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
           {cv.languages && cv.languages.length > 0 && (
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-stone-700 pb-1 mb-2 border-b border-stone-300">
-                Languages
+                {getSectionTitle(cv, 'languages', 'Languages')}
               </h2>
               <div className="space-y-1 text-[11px] text-stone-800">
                 {cv.languages.map((l) => (
@@ -129,7 +130,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
           {cv.certifications && cv.certifications.length > 0 && (
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-stone-700 pb-1 mb-2 border-b border-stone-300">
-                Certifications
+                {getSectionTitle(cv, 'certifications', 'Certifications')}
               </h2>
               <div className="space-y-2 text-[11px]">
                 {cv.certifications.map((c) => (
@@ -152,7 +153,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-serif font-bold uppercase tracking-wider mb-2"
                 style={{ color: theme }}
               >
-                Professional Overview
+                {getSectionTitle(cv, 'summary', 'Professional Overview')}
               </h2>
               <p className="text-[11px] sm:text-xs text-stone-700 leading-relaxed">
                 {cv.summary}
@@ -167,7 +168,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-serif font-bold uppercase tracking-wider mb-4"
                 style={{ color: theme }}
               >
-                Career Timeline
+                {getSectionTitle(cv, 'experience', 'Career Timeline')}
               </h2>
 
               <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-stone-300">
@@ -208,7 +209,7 @@ export const BotanicalTerracottaTemplate: React.FC<Props> = ({ cv }) => {
                 className="text-xs font-serif font-bold uppercase tracking-wider mb-4"
                 style={{ color: theme }}
               >
-                Key Projects & Initiatives
+                {getSectionTitle(cv, 'projects', 'Key Projects & Initiatives')}
               </h2>
 
               <div className="relative pl-6 space-y-5 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-stone-300">

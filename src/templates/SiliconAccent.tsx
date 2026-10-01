@@ -1,5 +1,6 @@
 import React from 'react';
 import { CVData } from '../types/cv';
+import { getSectionTitle } from '../utils/sectionTitles';
 
 interface Props {
   cv: CVData;
@@ -85,7 +86,7 @@ export const SiliconAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.skills && cv.skills.length > 0 && (
             <section className="break-inside-avoid">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-3">
-                Skills
+                {getSectionTitle(cv, 'skills', 'Skills')}
               </h2>
               <div className="space-y-3">
                 {cv.skills.map((cat) => (
@@ -111,7 +112,7 @@ export const SiliconAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.educations && cv.educations.length > 0 && (
             <section className="break-inside-avoid">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-3">
-                Education
+                {getSectionTitle(cv, 'education', 'Education')}
               </h2>
               <div className="relative pl-5 space-y-4 before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-300">
                 {cv.educations.map((edu) => (
@@ -141,7 +142,7 @@ export const SiliconAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.certifications && cv.certifications.length > 0 && (
             <section className="break-inside-avoid">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-2">
-                Certifications
+                {getSectionTitle(cv, 'certifications', 'Certifications')}
               </h2>
               <div className="space-y-2 text-[11px]">
                 {cv.certifications.map((c) => (
@@ -158,7 +159,7 @@ export const SiliconAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.languages && cv.languages.length > 0 && (
             <section className="break-inside-avoid">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-2">
-                Languages
+                {getSectionTitle(cv, 'languages', 'Languages')}
               </h2>
               <ul className="space-y-1 text-[11px] text-slate-700">
                 {cv.languages.map((l) => (
@@ -178,7 +179,7 @@ export const SiliconAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.experiences && cv.experiences.length > 0 && (
             <section className="break-inside-avoid">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-4">
-                Experience
+                {getSectionTitle(cv, 'experience', 'Experience')}
               </h2>
               <div className="space-y-5">
                 {cv.experiences.map((exp) => (
@@ -212,7 +213,7 @@ export const SiliconAccentTemplate: React.FC<Props> = ({ cv }) => {
           {cv.projects && cv.projects.length > 0 && (
             <section className="break-inside-avoid">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-4">
-                Projects
+                {getSectionTitle(cv, 'projects', 'Projects')}
               </h2>
               <div className="space-y-5">
                 {cv.projects.map((proj) => (

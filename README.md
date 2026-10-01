@@ -179,7 +179,7 @@ This project is open-source and available under the [MIT License](LICENSE).
 
 <div align="center">
 
-**CraftCV Pro** • Version Alpha 0.2.0  
+**CraftCV Pro** • Version Alpha 0.1.0  
 *100% Free Forever • Zero Subscriptions • Complete Client-Side Privacy*  
 🌐 [Live Demo](https://kashyapmak.github.io/CraftCV/) • 📦 [Repository](https://github.com/kashyapmak/CraftCV)
 

@@ -255,6 +255,7 @@ export const CvDashboardModal: React.FC<Props> = ({
           projects: candidateCv.projects || [],
           certifications: candidateCv.certifications || [],
           languages: candidateCv.languages || [],
+          sectionTitles: candidateCv.sectionTitles || {},
           customSections: candidateCv.customSections || []
         };
 
