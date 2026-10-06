@@ -1,6 +1,7 @@
 import React from 'react';
-import { CVData } from '../types/cv';
+import { CVData, CVSectionKey } from '../types/cv';
 import { getSectionTitle } from '../utils/sectionTitles';
+import { getOrderedSections } from '../utils/sectionOrder';
 
 interface Props {
   cv: CVData;
@@ -8,7 +9,197 @@ interface Props {
 
 export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
   const p = cv.personalDetails;
-  const theme = cv.themeColor || '#1c1917';
+  const orderedSections = getOrderedSections(cv);
+
+  const renderSection = (key: CVSectionKey) => {
+    switch (key) {
+      case 'education':
+        if (!cv.educations || cv.educations.length === 0) return null;
+        return (
+          <section className="mb-6 break-inside-avoid">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
+              {getSectionTitle(cv, 'education', 'Education')}
+            </h2>
+            <div className="space-y-3">
+              {cv.educations.map((edu) => (
+                <div key={edu.id}>
+                  <div className="flex justify-between items-baseline">
+                    <span className="font-bold text-sm text-stone-950 font-serif">
+                      {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
+                    </span>
+                    <span className="text-xs text-stone-600 font-sans">
+                      {edu.startDate} – {edu.isCurrent ? 'Present' : edu.endDate}
+                    </span>
+                  </div>
+                  <div className="text-xs text-stone-700 italic">
+                    {edu.school}, {edu.location}
+                  </div>
+                  {edu.grade && <div className="text-xs text-stone-600 font-sans">Honours / Grade: {edu.grade}</div>}
+                  {edu.details && (
+                    <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5 text-xs text-stone-700">
+                      {edu.details.map((d, i) => (
+                        <li key={i}>{d}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+
+      case 'experience':
+        if (!cv.experiences || cv.experiences.length === 0) return null;
+        return (
+          <section className="mb-6">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
+              {getSectionTitle(cv, 'experience', 'Appointments & Experience')}
+            </h2>
+            <div className="space-y-4">
+              {cv.experiences.map((exp) => (
+                <div key={exp.id} className="break-inside-avoid">
+                  <div className="flex justify-between items-baseline">
+                    <span className="font-bold text-sm text-stone-950 font-serif">
+                      {exp.jobTitle}
+                    </span>
+                    <span className="text-xs text-stone-600 font-sans">
+                      {exp.startDate} – {exp.isCurrent ? 'Present' : exp.endDate}
+                    </span>
+                  </div>
+                  <div className="text-xs text-stone-700 italic mb-1">
+                    {exp.employer}, {exp.location}
+                  </div>
+                  {exp.highlights && exp.highlights.length > 0 && (
+                    <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-stone-800 leading-normal">
+                      {exp.highlights
+                        .filter((h) => h.trim().length > 0)
+                        .map((h, i) => (
+                          <li key={i}>{h}</li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+
+      case 'projects':
+        if (!cv.projects || cv.projects.length === 0) return null;
+        return (
+          <section className="mb-6 break-inside-avoid">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
+              {getSectionTitle(cv, 'projects', 'Publications, Projects & Grants')}
+            </h2>
+            <div className="space-y-2.5">
+              {cv.projects.map((proj) => (
+                <div key={proj.id} className="text-xs">
+                  <div className="flex justify-between font-bold text-stone-900 font-serif">
+                    <span>{proj.title}</span>
+                    {proj.startDate && <span className="font-sans font-normal text-stone-500">{proj.startDate}</span>}
+                  </div>
+                  {proj.subtitle && <div className="italic text-stone-600">{proj.subtitle}</div>}
+                  {proj.link && <div className="font-sans text-stone-600 text-[11px]">{proj.link}</div>}
+                  {proj.description && (
+                    <p className="mt-1 text-stone-700 leading-relaxed whitespace-pre-line font-serif">
+                      {proj.description}
+                    </p>
+                  )}
+                  {proj.highlights && (
+                    <ul className="list-disc list-outside ml-4 mt-1 text-stone-700 space-y-0.5">
+                      {proj.highlights.map((h, i) => (
+                        <li key={i}>{h}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+
+      case 'skills':
+        if (!cv.skills || cv.skills.length === 0) return null;
+        return (
+          <section className="mb-6 break-inside-avoid">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
+              {getSectionTitle(cv, 'skills', 'Areas of Expertise')}
+            </h2>
+            <div className="space-y-1 text-xs text-stone-800">
+              {cv.skills.map((s) => (
+                <div key={s.id}>
+                  <span className="font-bold text-stone-900 font-serif">{s.category}: </span>
+                  <span>{s.items.join(', ')}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+
+      case 'certifications':
+        if (!cv.certifications || cv.certifications.length === 0) return null;
+        return (
+          <section className="mb-6 break-inside-avoid">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-1.5 font-serif">
+              {getSectionTitle(cv, 'certifications', 'Affiliations & Certifications')}
+            </h2>
+            <ul className="space-y-0.5 text-xs text-stone-700">
+              {cv.certifications.map((c) => (
+                <li key={c.id}>
+                  {c.name}, {c.issuer} ({c.issueDate})
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+
+      case 'languages':
+        if (!cv.languages || cv.languages.length === 0) return null;
+        return (
+          <section className="mb-6 break-inside-avoid">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-1.5 font-serif">
+              {getSectionTitle(cv, 'languages', 'Languages')}
+            </h2>
+            <div className="space-y-0.5 text-xs text-stone-700">
+              {cv.languages.map((l) => (
+                <div key={l.id}>
+                  {l.language} — <span className="italic">{l.proficiency}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+
+      case 'customSections':
+        if (!cv.customSections || cv.customSections.length === 0) return null;
+        return (
+          <div className="space-y-4 mb-6">
+            {cv.customSections.map((sec) => (
+              <section key={sec.id} className="break-inside-avoid">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
+                  {sec.sectionTitle}
+                </h2>
+                <div className="space-y-2.5">
+                  {sec.items.map((item) => (
+                    <div key={item.id} className="text-xs">
+                      <div className="flex justify-between font-bold text-stone-900 font-serif">
+                        <span>{item.title}</span>
+                        {item.date && <span className="font-sans font-normal text-stone-500">{item.date}</span>}
+                      </div>
+                      {item.subtitle && <div className="italic text-stone-600">{item.subtitle}</div>}
+                      {item.description && <p className="mt-0.5 text-stone-700 leading-relaxed font-serif">{item.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="w-full bg-white text-stone-900 p-9 sm:p-12 leading-relaxed" style={{ fontFamily: "'EB Garamond', Georgia, serif" }}>
@@ -44,178 +235,12 @@ export const AcademicClassicTemplate: React.FC<Props> = ({ cv }) => {
         </section>
       )}
 
-      {/* Education */}
-      {cv.educations.length > 0 && (
-        <section className="mb-6 break-inside-avoid">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
-            {getSectionTitle(cv, 'education', 'Education')}
-          </h2>
-          <div className="space-y-3">
-            {cv.educations.map((edu) => (
-              <div key={edu.id}>
-                <div className="flex justify-between items-baseline">
-                  <span className="font-bold text-sm text-stone-950 font-serif">
-                    {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
-                  </span>
-                  <span className="text-xs text-stone-600 font-sans">
-                    {edu.startDate} – {edu.isCurrent ? 'Present' : edu.endDate}
-                  </span>
-                </div>
-                <div className="text-xs text-stone-700 italic">
-                  {edu.school}, {edu.location}
-                </div>
-                {edu.grade && <div className="text-xs text-stone-600 font-sans">Honours / Grade: {edu.grade}</div>}
-                {edu.details && (
-                  <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5 text-xs text-stone-700">
-                    {edu.details.map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Professional & Academic Experience */}
-      {cv.experiences.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
-            {getSectionTitle(cv, 'experience', 'Appointments & Experience')}
-          </h2>
-          <div className="space-y-4">
-            {cv.experiences.map((exp) => (
-              <div key={exp.id} className="break-inside-avoid">
-                <div className="flex justify-between items-baseline">
-                  <span className="font-bold text-sm text-stone-950 font-serif">
-                    {exp.jobTitle}
-                  </span>
-                  <span className="text-xs text-stone-600 font-sans">
-                    {exp.startDate} – {exp.isCurrent ? 'Present' : exp.endDate}
-                  </span>
-                </div>
-                <div className="text-xs text-stone-700 italic mb-1">
-                  {exp.employer}, {exp.location}
-                </div>
-                {exp.highlights && exp.highlights.length > 0 && (
-                  <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-stone-800 leading-normal">
-                    {exp.highlights
-                      .filter((h) => h.trim().length > 0)
-                      .map((h, i) => (
-                        <li key={i}>{h}</li>
-                      ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Publications / Projects */}
-      {cv.projects && cv.projects.length > 0 && (
-        <section className="mb-6 break-inside-avoid">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-3 font-serif">
-            {getSectionTitle(cv, 'projects', 'Publications, Projects & Grants')}
-          </h2>
-          <div className="space-y-2.5">
-            {cv.projects.map((proj) => (
-              <div key={proj.id} className="text-xs">
-                <div className="flex justify-between font-bold text-stone-900 font-serif">
-                  <span>{proj.title}</span>
-                  {proj.startDate && <span className="font-sans font-normal text-stone-500">{proj.startDate}</span>}
-                </div>
-                {proj.subtitle && <div className="italic text-stone-600">{proj.subtitle}</div>}
-                {proj.link && <div className="font-sans text-stone-600 text-[11px]">{proj.link}</div>}
-                {proj.description && (
-                  <p className="mt-1 text-stone-700 leading-relaxed whitespace-pre-line font-serif">
-                    {proj.description}
-                  </p>
-                )}
-                {proj.highlights && (
-                  <ul className="list-disc list-outside ml-4 mt-1 text-stone-700 space-y-0.5">
-                    {proj.highlights.map((h, i) => (
-                      <li key={i}>{h}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Skills & Competencies */}
-      {cv.skills.length > 0 && (
-        <section className="mb-6 break-inside-avoid">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
-            {getSectionTitle(cv, 'skills', 'Areas of Expertise')}
-          </h2>
-          <div className="space-y-1 text-xs text-stone-800">
-            {cv.skills.map((s) => (
-              <div key={s.id}>
-                <span className="font-bold text-stone-900 font-serif">{s.category}: </span>
-                <span>{s.items.join(', ')}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Custom Sections */}
-      {cv.customSections && cv.customSections.map((sec) => (
-        <section key={sec.id} className="mb-6 break-inside-avoid">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-2 font-serif">
-            {sec.sectionTitle}
-          </h2>
-          <div className="space-y-2.5">
-            {sec.items.map((item) => (
-              <div key={item.id} className="text-xs">
-                <div className="flex justify-between font-bold text-stone-900 font-serif">
-                  <span>{item.title}</span>
-                  {item.date && <span className="font-sans font-normal text-stone-500">{item.date}</span>}
-                </div>
-                {item.subtitle && <div className="italic text-stone-600">{item.subtitle}</div>}
-                {item.description && <p className="mt-0.5 text-stone-700 leading-relaxed font-serif">{item.description}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* Dynamically Ordered CV Sections */}
+      {orderedSections.map((key) => (
+        <React.Fragment key={key}>
+          {renderSection(key)}
+        </React.Fragment>
       ))}
-
-      {/* Languages & Certifications */}
-      <div className="grid grid-cols-2 gap-4 text-xs">
-        {cv.languages && cv.languages.length > 0 && (
-          <div className="break-inside-avoid">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-1.5 font-serif">
-              {getSectionTitle(cv, 'languages', 'Languages')}
-            </h2>
-            <div className="space-y-0.5 text-stone-700">
-              {cv.languages.map((l) => (
-                <div key={l.id}>
-                  {l.language} — <span className="italic">{l.proficiency}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {cv.certifications && cv.certifications.length > 0 && (
-          <div className="break-inside-avoid">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-800 border-b border-stone-300 pb-0.5 mb-1.5 font-serif">
-              {getSectionTitle(cv, 'certifications', 'Affiliations & Certifications')}
-            </h2>
-            <ul className="space-y-0.5 text-stone-700">
-              {cv.certifications.map((c) => (
-                <li key={c.id}>
-                  {c.name}, {c.issuer} ({c.issueDate})
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

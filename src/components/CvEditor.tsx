@@ -10,6 +10,7 @@ import {
   CustomSection,
   CustomSectionItem,
   SectionTitles,
+  CVSectionKey,
   FontFamilyType,
   FontSizeType,
   SpacingType
@@ -36,11 +37,23 @@ import {
   FolderPlus,
   RotateCcw,
   Type,
-  ListPlus
+  ListPlus,
+  ArrowUp,
+  ArrowDown,
+  ListOrdered,
+  SlidersHorizontal
 } from 'lucide-react';
 import { isCvEmpty } from '../data/sampleCV';
 import { SectionTitleField } from './SectionTitleField';
+import { SectionReorderModal } from './SectionReorderModal';
 import { DEFAULT_SECTION_TITLES } from '../utils/sectionTitles';
+import {
+  getEffectiveSectionOrder,
+  moveSectionInOrder,
+  SECTION_METADATA,
+  SECTION_ORDER_PRESETS,
+  DEFAULT_SECTION_ORDER
+} from '../utils/sectionOrder';
 
 interface Props {
   cv: CVData;
@@ -63,6 +76,7 @@ export const CvEditor: React.FC<Props> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>('personal');
   const [newSkillInputs, setNewSkillInputs] = useState<Record<string, string>>({});
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
   // Helper updater
   const updateCv = (patch: Partial<CVData>) => {
@@ -458,6 +472,128 @@ export const CvEditor: React.FC<Props> = ({
     }
   };
 
+  // ================= REORDERING HELPERS =================
+  const handleMoveExperience = (index: number, direction: 'up' | 'down') => {
+    const list = [...cv.experiences];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ experiences: list });
+  };
+
+  const handleMoveEducation = (index: number, direction: 'up' | 'down') => {
+    const list = [...cv.educations];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ educations: list });
+  };
+
+  const handleMoveSkillCategory = (index: number, direction: 'up' | 'down') => {
+    const list = [...cv.skills];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ skills: list });
+  };
+
+  const handleMoveSkillTag = (catIndex: number, tagIndex: number, direction: 'left' | 'right') => {
+    const list = [...cv.skills];
+    const cat = { ...list[catIndex] };
+    const items = [...cat.items];
+    const targetIdx = direction === 'left' ? tagIndex - 1 : tagIndex + 1;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+    const temp = items[tagIndex];
+    items[tagIndex] = items[targetIdx];
+    items[targetIdx] = temp;
+    cat.items = items;
+    list[catIndex] = cat;
+    updateCv({ skills: list });
+  };
+
+  const handleMoveProject = (index: number, direction: 'up' | 'down') => {
+    const list = [...(cv.projects || [])];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ projects: list });
+  };
+
+  const handleMoveCert = (index: number, direction: 'up' | 'down') => {
+    const list = [...(cv.certifications || [])];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ certifications: list });
+  };
+
+  const handleMoveLanguage = (index: number, direction: 'up' | 'down') => {
+    const list = [...(cv.languages || [])];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ languages: list });
+  };
+
+  const handleMoveCustomSection = (index: number, direction: 'up' | 'down') => {
+    const list = [...(cv.customSections || [])];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    updateCv({ customSections: list });
+  };
+
+  const handleMoveCustomSectionItem = (secIndex: number, itemIndex: number, direction: 'up' | 'down') => {
+    const list = [...(cv.customSections || [])];
+    const sec = { ...list[secIndex] };
+    const items = [...(sec.items || [])];
+    const targetIdx = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+    const temp = items[itemIndex];
+    items[itemIndex] = items[targetIdx];
+    items[targetIdx] = temp;
+    sec.items = items;
+    list[secIndex] = sec;
+    updateCv({ customSections: list });
+  };
+
+  const handleUpdateSectionOrder = (newOrder: CVSectionKey[]) => {
+    updateCv({ sectionOrder: newOrder });
+  };
+
+  const currentSectionOrder = getEffectiveSectionOrder(cv);
+  const getSectionPosNumber = (key: CVSectionKey): number => {
+    const idx = currentSectionOrder.indexOf(key);
+    return idx === -1 ? currentSectionOrder.length : idx + 1;
+  };
+
+  const handleMoveSection = (key: CVSectionKey, direction: 'up' | 'down') => {
+    const updated = moveSectionInOrder(currentSectionOrder, key, direction);
+    updateCv({ sectionOrder: updated });
+  };
+
+  const isSectionFirst = (key: CVSectionKey): boolean => {
+    return currentSectionOrder.indexOf(key) === 0;
+  };
+
+  const isSectionLast = (key: CVSectionKey): boolean => {
+    return currentSectionOrder.indexOf(key) === currentSectionOrder.length - 1;
+  };
+
   // Handle Photo upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -551,7 +687,7 @@ export const CvEditor: React.FC<Props> = ({
 
         <button
           onClick={() => setActiveTab('design')}
-          className={`pb-2.5 px-3 text-xs font-bold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ml-auto ${
+          className={`pb-2.5 px-3 text-xs font-bold border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'design'
               ? 'border-indigo-600 text-indigo-700'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -559,6 +695,16 @@ export const CvEditor: React.FC<Props> = ({
         >
           <Palette className="w-3.5 h-3.5" />
           <span>Theme & Style</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsReorderModalOpen(true)}
+          className="pb-2.5 px-3 text-xs font-bold border-b-2 border-transparent text-indigo-600 hover:text-indigo-800 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ml-auto hover:bg-indigo-50/50 rounded-t-lg"
+          title="Reorder how sections appear on your CV"
+        >
+          <ListOrdered className="w-3.5 h-3.5" />
+          <span>Reorder Sections</span>
         </button>
       </div>
 
@@ -854,7 +1000,39 @@ export const CvEditor: React.FC<Props> = ({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsReorderModalOpen(true)}
+                    className="px-2 py-1 hover:bg-slate-50 text-slate-700 hover:text-indigo-700 rounded text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                    title="Open all section reorder options"
+                  >
+                    <ListOrdered className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Section #{getSectionPosNumber('experience')}</span>
+                  </button>
+                  <div className="h-4 w-px bg-slate-200" />
+                  <button
+                    type="button"
+                    disabled={isSectionFirst('experience')}
+                    onClick={() => handleMoveSection('experience', 'up')}
+                    className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                    title="Move Experience earlier on CV"
+                    aria-label="Move Experience earlier on CV"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSectionLast('experience')}
+                    onClick={() => handleMoveSection('experience', 'down')}
+                    className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                    title="Move Experience later on CV"
+                    aria-label="Move Experience later on CV"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={onOpenPhrases}
@@ -924,14 +1102,36 @@ export const CvEditor: React.FC<Props> = ({
                           {exp.jobTitle || 'New Position'} {exp.employer ? `at ${exp.employer}` : ''}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteExperience(expIdx)}
-                        className="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer"
-                        title="Remove position"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={expIdx === 0}
+                          onClick={() => handleMoveExperience(expIdx, 'up')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move role up"
+                          aria-label="Move role up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={expIdx === cv.experiences.length - 1}
+                          onClick={() => handleMoveExperience(expIdx, 'down')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move role down"
+                          aria-label="Move role down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExperience(expIdx)}
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer ml-1"
+                          title="Remove position"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1085,14 +1285,48 @@ export const CvEditor: React.FC<Props> = ({
                 <h3 className="text-sm font-bold text-slate-900">Education & Academic Background</h3>
                 <p className="text-xs text-slate-500">Degrees, colleges, universities, or training courses.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleAddEducation(false)}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Education</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsReorderModalOpen(true)}
+                    className="px-2 py-1 hover:bg-slate-50 text-slate-700 hover:text-indigo-700 rounded text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                    title="Open all section reorder options"
+                  >
+                    <ListOrdered className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Section #{getSectionPosNumber('education')}</span>
+                  </button>
+                  <div className="h-4 w-px bg-slate-200" />
+                  <button
+                    type="button"
+                    disabled={isSectionFirst('education')}
+                    onClick={() => handleMoveSection('education', 'up')}
+                    className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                    title="Move Education earlier on CV (e.g. above Experience)"
+                    aria-label="Move Education earlier on CV"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSectionLast('education')}
+                    onClick={() => handleMoveSection('education', 'down')}
+                    className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                    title="Move Education later on CV"
+                    aria-label="Move Education later on CV"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddEducation(false)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Education</span>
+                </button>
+              </div>
             </div>
 
             {/* Section Heading Customization */}
@@ -1145,14 +1379,36 @@ export const CvEditor: React.FC<Props> = ({
                           {edu.degree || 'Degree'} {edu.school ? `· ${edu.school}` : ''}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteEducation(eduIdx)}
-                        className="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer"
-                        title="Remove education"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={eduIdx === 0}
+                          onClick={() => handleMoveEducation(eduIdx, 'up')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move education up"
+                          aria-label="Move education up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={eduIdx === cv.educations.length - 1}
+                          onClick={() => handleMoveEducation(eduIdx, 'down')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move education down"
+                          aria-label="Move education down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEducation(eduIdx)}
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer ml-1"
+                          title="Remove education"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1280,14 +1536,48 @@ export const CvEditor: React.FC<Props> = ({
                 <h3 className="text-sm font-bold text-slate-900">Core Skills & Competencies</h3>
                 <p className="text-xs text-slate-500">Group your skills into categories (e.g. Frameworks, Tools, Soft Skills).</p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleAddSkillCategory(false)}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Category</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsReorderModalOpen(true)}
+                    className="px-2 py-1 hover:bg-slate-50 text-slate-700 hover:text-indigo-700 rounded text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                    title="Open all section reorder options"
+                  >
+                    <ListOrdered className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Section #{getSectionPosNumber('skills')}</span>
+                  </button>
+                  <div className="h-4 w-px bg-slate-200" />
+                  <button
+                    type="button"
+                    disabled={isSectionFirst('skills')}
+                    onClick={() => handleMoveSection('skills', 'up')}
+                    className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                    title="Move Skills earlier on CV"
+                    aria-label="Move Skills earlier on CV"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSectionLast('skills')}
+                    onClick={() => handleMoveSection('skills', 'down')}
+                    className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                    title="Move Skills later on CV"
+                    aria-label="Move Skills later on CV"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddSkillCategory(false)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Category</span>
+                </button>
+              </div>
             </div>
 
             {/* Section Heading Customization */}
@@ -1332,21 +1622,48 @@ export const CvEditor: React.FC<Props> = ({
                     className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <input
-                        type="text"
-                        value={cat.category}
-                        onChange={(e) => handleUpdateSkillCategoryName(catIdx, e.target.value)}
-                        placeholder="Category Name (e.g. Technical Skills)"
-                        className="font-bold text-xs text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 focus:outline-hidden pb-0.5"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSkillCategory(catIdx)}
-                        className="text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer"
-                        title="Delete category"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0">
+                          {catIdx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={cat.category}
+                          onChange={(e) => handleUpdateSkillCategoryName(catIdx, e.target.value)}
+                          placeholder="Category Name (e.g. Technical Skills)"
+                          className="font-bold text-xs text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 focus:outline-hidden pb-0.5 w-full"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={catIdx === 0}
+                          onClick={() => handleMoveSkillCategory(catIdx, 'up')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move category up"
+                          aria-label="Move category up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={catIdx === cv.skills.length - 1}
+                          onClick={() => handleMoveSkillCategory(catIdx, 'down')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move category down"
+                          aria-label="Move category down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSkillCategory(catIdx)}
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-slate-200/60 transition cursor-pointer"
+                          title="Delete category"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Skill Badges */}
@@ -1354,13 +1671,34 @@ export const CvEditor: React.FC<Props> = ({
                       {cat.items.map((skill, sIdx) => (
                         <span
                           key={sIdx}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-800 rounded-md text-xs font-medium border border-indigo-100"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-800 rounded-md text-xs font-medium border border-indigo-100 group/tag"
                         >
-                          {skill}
+                          {sIdx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSkillTag(catIdx, sIdx, 'left')}
+                              className="text-indigo-400 hover:text-indigo-800 cursor-pointer text-[10px] leading-none px-0.5"
+                              title="Move left"
+                            >
+                              ‹
+                            </button>
+                          )}
+                          <span>{skill}</span>
+                          {sIdx < cat.items.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSkillTag(catIdx, sIdx, 'right')}
+                              className="text-indigo-400 hover:text-indigo-800 cursor-pointer text-[10px] leading-none px-0.5"
+                              title="Move right"
+                            >
+                              ›
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleRemoveSkillTag(catIdx, sIdx)}
-                            className="text-indigo-400 hover:text-rose-600 ml-0.5 cursor-pointer"
+                            className="text-indigo-400 hover:text-rose-600 ml-0.5 cursor-pointer font-bold"
+                            title="Remove skill"
                           >
                             ×
                           </button>
@@ -1430,13 +1768,47 @@ export const CvEditor: React.FC<Props> = ({
                   </h4>
                   <p className="text-[11px] text-slate-500">Showcase open source, case studies, or freelance projects.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleAddProject(false)}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="w-3 h-3" /> Add Project
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setIsReorderModalOpen(true)}
+                      className="px-2 py-1 hover:bg-slate-50 text-slate-700 hover:text-indigo-700 rounded text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                      title="Open all section reorder options"
+                    >
+                      <ListOrdered className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Section #{getSectionPosNumber('projects')}</span>
+                    </button>
+                    <div className="h-4 w-px bg-slate-200" />
+                    <button
+                      type="button"
+                      disabled={isSectionFirst('projects')}
+                      onClick={() => handleMoveSection('projects', 'up')}
+                      className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                      title="Move Projects earlier on CV"
+                      aria-label="Move Projects earlier on CV"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSectionLast('projects')}
+                      onClick={() => handleMoveSection('projects', 'down')}
+                      className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                      title="Move Projects later on CV"
+                      aria-label="Move Projects later on CV"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddProject(false)}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" /> Add Project
+                  </button>
+                </div>
               </div>
 
               {/* Section Heading Customization */}
@@ -1475,15 +1847,44 @@ export const CvEditor: React.FC<Props> = ({
                 cv.projects.map((proj, pIdx) => (
                   <div key={proj.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 relative">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">Project #{pIdx + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteProject(pIdx)}
-                        className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 rounded-md hover:bg-slate-200/60 transition"
-                        title="Remove Project"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center">
+                          {pIdx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800">
+                          {proj.title || `Project #${pIdx + 1}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={pIdx === 0}
+                          onClick={() => handleMoveProject(pIdx, 'up')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move project up"
+                          aria-label="Move project up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pIdx === (cv.projects?.length || 0) - 1}
+                          onClick={() => handleMoveProject(pIdx, 'down')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title="Move project down"
+                          aria-label="Move project down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProject(pIdx)}
+                          className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 rounded-md hover:bg-slate-200/60 transition"
+                          title="Remove Project"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
@@ -2053,6 +2454,101 @@ export const CvEditor: React.FC<Props> = ({
               </button>
             </div>
 
+            {/* Section Order & Layout Structure */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <ListOrdered className="w-4 h-4 text-indigo-600" />
+                    <span>CV Section Order & Layout</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Control the order of Education, Experience, Skills, and Projects on your CV.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsReorderModalOpen(true)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <ListOrdered className="w-3.5 h-3.5" />
+                  <span>Customize Order</span>
+                </button>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {SECTION_ORDER_PRESETS.map((preset) => {
+                  const isCurrent =
+                    JSON.stringify(currentSectionOrder.slice(0, 4)) ===
+                    JSON.stringify(preset.order.slice(0, 4));
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleUpdateSectionOrder(preset.order)}
+                      className={`p-2 rounded-lg border text-left transition cursor-pointer ${
+                        isCurrent
+                          ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 font-bold ring-1 ring-indigo-500/30'
+                          : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold leading-tight truncate">{preset.name}</div>
+                      <div className="text-[9.5px] text-slate-500 truncate mt-0.5">{preset.badge}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Quick Move Rows for Core Sections */}
+              <div className="space-y-1.5 pt-1">
+                {(['experience', 'education', 'skills', 'projects'] as CVSectionKey[]).map((secKey) => {
+                  const meta = SECTION_METADATA[secKey];
+                  const pos = getSectionPosNumber(secKey);
+                  return (
+                    <div
+                      key={secKey}
+                      className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center border border-slate-200">
+                          {pos}
+                        </span>
+                        <span className="font-semibold text-slate-800">{meta?.label || secKey}</span>
+                        {cv.sectionTitles?.[secKey as keyof SectionTitles] && (
+                          <span className="text-[10px] text-indigo-600 italic">
+                            ("{cv.sectionTitles[secKey as keyof SectionTitles]}")
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={isSectionFirst(secKey)}
+                          onClick={() => handleMoveSection(secKey, 'up')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title={`Move ${meta?.label || secKey} up`}
+                          aria-label={`Move ${meta?.label || secKey} up`}
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSectionLast(secKey)}
+                          onClick={() => handleMoveSection(secKey, 'down')}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 disabled:opacity-25 disabled:pointer-events-none transition cursor-pointer"
+                          title={`Move ${meta?.label || secKey} down`}
+                          aria-label={`Move ${meta?.label || secKey} down`}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Accent Color Palette */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-800 block">
@@ -2148,6 +2644,57 @@ export const CvEditor: React.FC<Props> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Page Margins Preset (A4 PDF & Print) */}
+            <div className="space-y-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Page Margins (A4 PDF & Print):</span>
+                </label>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {cv.pageMargin === 14
+                    ? '14mm · Compact'
+                    : cv.pageMargin === 26
+                    ? '26mm · Spacious'
+                    : '20mm · Standard (Default)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Applied to all sides on download and print. Guaranteed consistent margins from 2nd page onwards even when Header &amp; Footer is turned off.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
+                {([
+                  { mm: 14 as const, label: '14mm Compact', desc: 'Fits more content per page' },
+                  { mm: 20 as const, label: '20mm Standard', desc: 'Recommended default margin' },
+                  { mm: 26 as const, label: '26mm Spacious', desc: 'Executive roomy layout' }
+                ]).map((preset) => {
+                  const isCurrent = (cv.pageMargin || 20) === preset.mm;
+                  return (
+                    <button
+                      key={preset.mm}
+                      type="button"
+                      onClick={() => updateCv({ pageMargin: preset.mm })}
+                      className={`p-2.5 rounded-lg border text-left transition cursor-pointer ${
+                        isCurrent
+                          ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-1 ring-indigo-500/20'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700 bg-white'
+                      }`}
+                    >
+                      <div className="text-xs font-bold flex items-center justify-between">
+                        <span>{preset.label}</span>
+                        {preset.mm === 20 && (
+                          <span className="text-[9px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-bold">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{preset.desc}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

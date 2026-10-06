@@ -28,6 +28,7 @@ interface Props {
   showPdfFooter?: boolean;
   onTogglePdfFooter?: (show: boolean) => void;
   onLoadSample?: () => void;
+  onUpdatePageMargin?: (margin: PageMarginPreset) => void;
 }
 
 export type PageMarginPreset = 14 | 20 | 26; // Compact, Standard, Spacious in mm
@@ -41,7 +42,8 @@ export const CvPreview: React.FC<Props> = ({
   onTogglePdfHeaderFooter,
   showPdfFooter,
   onTogglePdfFooter,
-  onLoadSample
+  onLoadSample,
+  onUpdatePageMargin
 }) => {
   const [localPdfHeaderFooter, setLocalPdfHeaderFooter] = useState<boolean>(true);
   const isPdfHeaderFooterActive =
@@ -63,6 +65,22 @@ export const CvPreview: React.FC<Props> = ({
 
   const isUsingSample = showSamplePreview || !userHasCv;
 
+  // Page margins between pages (default 20mm standard A4 margin)
+  const [pageMarginMm, setPageMarginMm] = useState<PageMarginPreset>(() => cv.pageMargin || 20);
+
+  useEffect(() => {
+    if (cv.pageMargin && cv.pageMargin !== pageMarginMm) {
+      setPageMarginMm(cv.pageMargin);
+    }
+  }, [cv.pageMargin]);
+
+  const handleSelectMargin = (newMargin: PageMarginPreset) => {
+    setPageMarginMm(newMargin);
+    if (onUpdatePageMargin) {
+      onUpdatePageMargin(newMargin);
+    }
+  };
+
   // Effective CV rendered in preview: falls back to Alexander Wright's profile if user CV is empty or sample is chosen
   const effectiveCv: CVData = isUsingSample
     ? {
@@ -71,17 +89,19 @@ export const CvPreview: React.FC<Props> = ({
         themeColor: cv.themeColor || '#2563eb',
         fontFamily: cv.fontFamily || 'inter',
         fontSize: cv.fontSize || 'base',
-        lineSpacing: cv.lineSpacing || 'normal'
+        lineSpacing: cv.lineSpacing || 'normal',
+        pageMargin: pageMarginMm
       }
-    : cv;
+    : {
+        ...cv,
+        pageMargin: pageMarginMm
+      };
 
   // Zoom mode: 'fit' (auto adjusts to container width so user sees complete page) or 'manual' (%)
   const [zoomMode, setZoomMode] = useState<'fit' | 'manual'>('fit');
   const [manualZoom, setManualZoom] = useState<number>(100);
   const [fitScale, setFitScale] = useState<number>(0.85);
 
-  // Page margins between pages (default 20mm standard A4 margin)
-  const [pageMarginMm, setPageMarginMm] = useState<PageMarginPreset>(20);
   const [showMarginGuides, setShowMarginGuides] = useState<boolean>(true);
 
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -285,7 +305,7 @@ export const CvPreview: React.FC<Props> = ({
             </span>
             <button
               type="button"
-              onClick={() => setPageMarginMm(14)}
+              onClick={() => handleSelectMargin(14)}
               className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
                 pageMarginMm === 14
                   ? 'bg-white text-indigo-700 shadow-2xs'
@@ -297,7 +317,7 @@ export const CvPreview: React.FC<Props> = ({
             </button>
             <button
               type="button"
-              onClick={() => setPageMarginMm(20)}
+              onClick={() => handleSelectMargin(20)}
               className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
                 pageMarginMm === 20
                   ? 'bg-white text-indigo-700 shadow-2xs'
@@ -309,7 +329,7 @@ export const CvPreview: React.FC<Props> = ({
             </button>
             <button
               type="button"
-              onClick={() => setPageMarginMm(26)}
+              onClick={() => handleSelectMargin(26)}
               className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
                 pageMarginMm === 26
                   ? 'bg-white text-indigo-700 shadow-2xs'
@@ -540,9 +560,9 @@ export const CvPreview: React.FC<Props> = ({
           >
             <TemplateRenderer cv={effectiveCv} containerId={undefined} />
           </div>
-          {isPdfHeaderFooterActive && (
+          {isPdfHeaderFooterActive ? (
             <div
-              className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+              className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100 shrink-0"
               style={{ height: `${pageMarginMm}mm` }}
             >
               <div className="flex items-center gap-2">
@@ -552,6 +572,12 @@ export const CvPreview: React.FC<Props> = ({
               </div>
               <span>Page 1 of {totalPages}</span>
             </div>
+          ) : (
+            <div
+              className="cv-pdf-footer-spacer cv-page-bottom-margin w-full bg-white shrink-0"
+              style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+              aria-hidden="true"
+            />
           )}
         </div>
 
@@ -561,9 +587,9 @@ export const CvPreview: React.FC<Props> = ({
             id="cv-export-page-2"
             className="cv-export-page-sheet w-[210mm] h-[297mm] bg-white relative flex flex-col justify-between overflow-hidden"
           >
-            {isPdfHeaderFooterActive && (
+            {isPdfHeaderFooterActive ? (
               <div
-                className="cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
+                className="cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100 shrink-0"
                 style={{ height: `${pageMarginMm}mm` }}
               >
                 <div className="flex items-center gap-2">
@@ -573,6 +599,12 @@ export const CvPreview: React.FC<Props> = ({
                 </div>
                 <span>Page 2</span>
               </div>
+            ) : (
+              <div
+                className="cv-pdf-header-spacer cv-page-top-margin w-full bg-white shrink-0"
+                style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                aria-hidden="true"
+              />
             )}
             <div
               className="w-full relative overflow-hidden"
@@ -585,14 +617,20 @@ export const CvPreview: React.FC<Props> = ({
                 <TemplateRenderer cv={effectiveCv} containerId={undefined} />
               </div>
             </div>
-            {isPdfHeaderFooterActive && (
+            {isPdfHeaderFooterActive ? (
               <div
-                className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+                className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100 shrink-0"
                 style={{ height: `${pageMarginMm}mm` }}
               >
                 <span className="text-slate-400">CV: {candidateName}</span>
                 <span>Page 2 of {totalPages}</span>
               </div>
+            ) : (
+              <div
+                className="cv-pdf-footer-spacer cv-page-bottom-margin w-full bg-white shrink-0"
+                style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                aria-hidden="true"
+              />
             )}
           </div>
         )}
@@ -603,14 +641,20 @@ export const CvPreview: React.FC<Props> = ({
             id="cv-export-page-3"
             className="cv-export-page-sheet w-[210mm] h-[297mm] bg-white relative flex flex-col justify-between overflow-hidden"
           >
-            {isPdfHeaderFooterActive && (
+            {isPdfHeaderFooterActive ? (
               <div
-                className="cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100"
+                className="cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-b border-slate-100 shrink-0"
                 style={{ height: `${pageMarginMm}mm` }}
               >
                 <span className="font-sans font-semibold text-slate-500">{candidateName} · CV</span>
                 <span>Page 3</span>
               </div>
+            ) : (
+              <div
+                className="cv-pdf-header-spacer cv-page-top-margin w-full bg-white shrink-0"
+                style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                aria-hidden="true"
+              />
             )}
             <div
               className="w-full relative overflow-hidden"
@@ -623,14 +667,20 @@ export const CvPreview: React.FC<Props> = ({
                 <TemplateRenderer cv={effectiveCv} containerId={undefined} />
               </div>
             </div>
-            {isPdfHeaderFooterActive && (
+            {isPdfHeaderFooterActive ? (
               <div
-                className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100"
+                className="cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono bg-white border-t border-slate-100 shrink-0"
                 style={{ height: `${pageMarginMm}mm` }}
               >
                 <span className="text-slate-400">CV: {candidateName}</span>
                 <span>Page 3 of {totalPages}</span>
               </div>
+            ) : (
+              <div
+                className="cv-pdf-footer-spacer cv-page-bottom-margin w-full bg-white shrink-0"
+                style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                aria-hidden="true"
+              />
             )}
           </div>
         )}
@@ -683,7 +733,7 @@ export const CvPreview: React.FC<Props> = ({
                 {/* Page 1 Bottom Margin Area ({pageMarginMm}mm) */}
                 {isPdfHeaderFooterActive ? (
                   <div
-                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors shrink-0 ${
                       showMarginGuides
                         ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
                         : 'border-t border-slate-100'
@@ -707,14 +757,18 @@ export const CvPreview: React.FC<Props> = ({
                     </div>
                   </div>
                 ) : (
-                  showMarginGuides && (
-                    <div
-                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-200 select-none bg-slate-50/40"
-                      style={{ height: `${pageMarginMm}mm` }}
-                    >
-                      <span>↓ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
-                    </div>
-                  )
+                  <div
+                    className={`cv-pdf-footer-spacer cv-page-bottom-margin w-full flex items-center justify-center text-[9px] font-mono text-slate-400 select-none shrink-0 ${
+                      showMarginGuides
+                        ? 'border-t border-dashed border-slate-200 bg-slate-50/40'
+                        : 'bg-white'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                  >
+                    {showMarginGuides && (
+                      <span>↓ {pageMarginMm}mm Bottom Margin · Header &amp; Footer OFF</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -763,7 +817,7 @@ export const CvPreview: React.FC<Props> = ({
                 {/* Page 2 Top Margin Area ({pageMarginMm}mm) */}
                 {isPdfHeaderFooterActive ? (
                   <div
-                    className={`cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                    className={`cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors shrink-0 ${
                       showMarginGuides
                         ? 'border-b border-dashed border-indigo-300/80 bg-indigo-50/20'
                         : 'border-b border-slate-100'
@@ -787,16 +841,18 @@ export const CvPreview: React.FC<Props> = ({
                     </div>
                   </div>
                 ) : (
-                  showMarginGuides ? (
-                    <div
-                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-b border-dashed border-slate-200 select-none bg-slate-50/40"
-                      style={{ height: `${pageMarginMm}mm` }}
-                    >
-                      <span>↑ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
-                    </div>
-                  ) : (
-                    <div style={{ height: `${pageMarginMm}mm` }} />
-                  )
+                  <div
+                    className={`cv-pdf-header-spacer cv-page-top-margin w-full flex items-center justify-center text-[9px] font-mono text-slate-400 select-none shrink-0 ${
+                      showMarginGuides
+                        ? 'border-b border-dashed border-slate-200 bg-slate-50/40'
+                        : 'bg-white'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                  >
+                    {showMarginGuides && (
+                      <span>↑ {pageMarginMm}mm Top Margin · Header &amp; Footer OFF</span>
+                    )}
+                  </div>
                 )}
 
                 {/* Printable Content Slice (from Page 1 cut-off downwards) */}
@@ -816,7 +872,7 @@ export const CvPreview: React.FC<Props> = ({
                 {/* Page 2 Bottom Margin Area ({pageMarginMm}mm) */}
                 {isPdfHeaderFooterActive ? (
                   <div
-                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors shrink-0 ${
                       showMarginGuides
                         ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
                         : 'border-t border-slate-100'
@@ -834,14 +890,18 @@ export const CvPreview: React.FC<Props> = ({
                     <span>Page 2 of {totalPages}</span>
                   </div>
                 ) : (
-                  showMarginGuides && (
-                    <div
-                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-200 select-none bg-slate-50/40"
-                      style={{ height: `${pageMarginMm}mm` }}
-                    >
-                      <span>↓ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
-                    </div>
-                  )
+                  <div
+                    className={`cv-pdf-footer-spacer cv-page-bottom-margin w-full flex items-center justify-center text-[9px] font-mono text-slate-400 select-none shrink-0 ${
+                      showMarginGuides
+                        ? 'border-t border-dashed border-slate-200 bg-slate-50/40'
+                        : 'bg-white'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                  >
+                    {showMarginGuides && (
+                      <span>↓ {pageMarginMm}mm Bottom Margin · Header &amp; Footer OFF</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -883,7 +943,7 @@ export const CvPreview: React.FC<Props> = ({
                 {/* Page 3 Top Margin Area */}
                 {isPdfHeaderFooterActive ? (
                   <div
-                    className={`cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                    className={`cv-pdf-header w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors shrink-0 ${
                       showMarginGuides
                         ? 'border-b border-dashed border-indigo-300/80 bg-indigo-50/20'
                         : 'border-b border-slate-100'
@@ -899,16 +959,18 @@ export const CvPreview: React.FC<Props> = ({
                     <span>Page 3</span>
                   </div>
                 ) : (
-                  showMarginGuides ? (
-                    <div
-                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-b border-dashed border-slate-200 select-none bg-slate-50/40"
-                      style={{ height: `${pageMarginMm}mm` }}
-                    >
-                      <span>↑ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
-                    </div>
-                  ) : (
-                    <div style={{ height: `${pageMarginMm}mm` }} />
-                  )
+                  <div
+                    className={`cv-pdf-header-spacer cv-page-top-margin w-full flex items-center justify-center text-[9px] font-mono text-slate-400 select-none shrink-0 ${
+                      showMarginGuides
+                        ? 'border-b border-dashed border-slate-200 bg-slate-50/40'
+                        : 'bg-white'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                  >
+                    {showMarginGuides && (
+                      <span>↑ {pageMarginMm}mm Top Margin · Header &amp; Footer OFF</span>
+                    )}
+                  </div>
                 )}
 
                 {/* Printable Content Slice (from Page 2 cut-off downwards) */}
@@ -927,7 +989,7 @@ export const CvPreview: React.FC<Props> = ({
                 {/* Page 3 Bottom Margin Area */}
                 {isPdfHeaderFooterActive ? (
                   <div
-                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors ${
+                    className={`cv-pdf-footer w-full flex items-center justify-between px-8 text-[10px] text-slate-400 font-mono select-none bg-white z-10 transition-colors shrink-0 ${
                       showMarginGuides
                         ? 'border-t border-dashed border-indigo-300/80 bg-indigo-50/20'
                         : 'border-t border-slate-100'
@@ -943,14 +1005,18 @@ export const CvPreview: React.FC<Props> = ({
                     <span>Page 3 of {totalPages}</span>
                   </div>
                 ) : (
-                  showMarginGuides && (
-                    <div
-                      className="w-full flex items-center justify-center text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-200 select-none bg-slate-50/40"
-                      style={{ height: `${pageMarginMm}mm` }}
-                    >
-                      <span>↓ {pageMarginMm}mm Margin · Header &amp; Footer OFF</span>
-                    </div>
-                  )
+                  <div
+                    className={`cv-pdf-footer-spacer cv-page-bottom-margin w-full flex items-center justify-center text-[9px] font-mono text-slate-400 select-none shrink-0 ${
+                      showMarginGuides
+                        ? 'border-t border-dashed border-slate-200 bg-slate-50/40'
+                        : 'bg-white'
+                    }`}
+                    style={{ height: `${pageMarginMm}mm`, minHeight: `${pageMarginMm}mm` }}
+                  >
+                    {showMarginGuides && (
+                      <span>↓ {pageMarginMm}mm Bottom Margin · Header &amp; Footer OFF</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

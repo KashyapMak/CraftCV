@@ -232,7 +232,8 @@ export default function App() {
       setIsExporting('pdf');
       await exportDirectPdf(activeCv, {
         showHeaderFooter: showPdfHeaderFooter,
-        showFooter: showPdfHeaderFooter
+        showFooter: showPdfHeaderFooter,
+        pageMargin: activeCv.pageMargin || 20
       });
       setIsExporting(null);
     } else if (format === 'docx') {
@@ -770,6 +771,7 @@ export default function App() {
                 showPdfFooter={showPdfHeaderFooter}
                 onTogglePdfFooter={handleTogglePdfHeaderFooter}
                 onLoadSample={handleLoadAlexanderWrightSample}
+                onUpdatePageMargin={(margin) => handleUpdateCv({ ...activeCv, pageMargin: margin })}
               />
             </div>
           </div>

@@ -89,9 +89,19 @@ export interface SectionTitles {
   languages?: string;
 }
 
+export type CVSectionKey =
+  | 'experience'
+  | 'education'
+  | 'skills'
+  | 'projects'
+  | 'certifications'
+  | 'languages'
+  | 'customSections';
+
 export type FontFamilyType = 'inter' | 'jakarta' | 'garamond' | 'mono' | 'cinzel';
 export type SpacingType = 'compact' | 'normal' | 'spacious';
 export type FontSizeType = 'sm' | 'base' | 'lg';
+export type PageMarginPreset = 14 | 20 | 26; // Compact (14mm), Standard (20mm), Spacious (26mm)
 
 export interface CVData {
   id: string;
@@ -103,6 +113,7 @@ export interface CVData {
   fontFamily: FontFamilyType;
   fontSize: FontSizeType;
   lineSpacing: SpacingType;
+  pageMargin?: PageMarginPreset;
   showPhoto: boolean;
   personalDetails: PersonalDetails;
   summary: string;
@@ -114,6 +125,7 @@ export interface CVData {
   languages: LanguageItem[];
   customSections: CustomSection[];
   sectionTitles?: SectionTitles;
+  sectionOrder?: CVSectionKey[];
 }
 
 export interface TemplateConfig {

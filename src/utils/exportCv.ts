@@ -58,9 +58,11 @@ export const triggerPrint = (fallbackCv?: CVData): void => {
  */
 export const exportDirectPdf = async (
   cv: CVData,
-  options?: { showHeaderFooter?: boolean; showFooter?: boolean }
+  options?: { showHeaderFooter?: boolean; showFooter?: boolean; pageMargin?: number }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    const selectedMarginMm = options?.pageMargin || cv.pageMargin || 20;
+
     // 1. Look for dedicated clean, unscaled export sheets first
     let pageSheets = Array.from(
       document.querySelectorAll<HTMLElement>('#cv-pdf-clean-export-container .cv-export-page-sheet')
@@ -95,10 +97,15 @@ export const exportDirectPdf = async (
         clone.style.zIndex = '-9999';
         clone.style.margin = '0';
         clone.style.display = 'flex';
+        clone.style.flexDirection = 'column';
+        clone.style.justifyContent = 'space-between';
         clone.style.visibility = 'visible';
         clone.style.opacity = '1';
 
         // Strip headers and footers if showHeaderFooter / showFooter option is false
+        // CRITICAL: We clear the content and styling while preserving the element's height
+        // so that margins are strictly preserved according to selection, preventing content
+        // on page 2 onwards from sticking directly to the top edge of the PDF.
         const shouldStripHeaderFooter =
           options?.showHeaderFooter === false || options?.showFooter === false;
 
@@ -106,7 +113,48 @@ export const exportDirectPdf = async (
           const headersAndFooters = clone.querySelectorAll<HTMLElement>(
             '.cv-pdf-header, .cv-page-header, .cv-pdf-footer, .cv-page-footer'
           );
-          headersAndFooters.forEach((el) => el.remove());
+          headersAndFooters.forEach((el) => {
+            el.innerHTML = '';
+            el.style.border = 'none';
+            el.style.backgroundColor = '#ffffff';
+            el.style.boxShadow = 'none';
+            el.style.visibility = 'hidden';
+            if (!el.style.height || el.style.height === 'auto') {
+              el.style.height = `${selectedMarginMm}mm`;
+            }
+          });
+        }
+
+        // Defensive check: Ensure 2nd page onwards (i > 0) ALWAYS has the top margin spacer
+        if (i > 0) {
+          const hasTopSpacer = clone.querySelector(
+            '.cv-pdf-header, .cv-page-header, .cv-pdf-header-spacer, .cv-page-top-margin'
+          );
+          if (!hasTopSpacer) {
+            const topMarginSpacer = document.createElement('div');
+            topMarginSpacer.className = 'cv-pdf-header-spacer cv-page-top-margin';
+            topMarginSpacer.style.width = '100%';
+            topMarginSpacer.style.height = `${selectedMarginMm}mm`;
+            topMarginSpacer.style.minHeight = `${selectedMarginMm}mm`;
+            topMarginSpacer.style.backgroundColor = '#ffffff';
+            topMarginSpacer.style.flexShrink = '0';
+            clone.insertBefore(topMarginSpacer, clone.firstChild);
+          }
+        }
+
+        // Defensive check: Ensure every page ALWAYS has the bottom margin spacer
+        const hasBottomSpacer = clone.querySelector(
+          '.cv-pdf-footer, .cv-page-footer, .cv-pdf-footer-spacer, .cv-page-bottom-margin'
+        );
+        if (!hasBottomSpacer) {
+          const bottomMarginSpacer = document.createElement('div');
+          bottomMarginSpacer.className = 'cv-pdf-footer-spacer cv-page-bottom-margin';
+          bottomMarginSpacer.style.width = '100%';
+          bottomMarginSpacer.style.height = `${selectedMarginMm}mm`;
+          bottomMarginSpacer.style.minHeight = `${selectedMarginMm}mm`;
+          bottomMarginSpacer.style.backgroundColor = '#ffffff';
+          bottomMarginSpacer.style.flexShrink = '0';
+          clone.appendChild(bottomMarginSpacer);
         }
 
         document.body.appendChild(clone);

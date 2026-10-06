@@ -62,6 +62,7 @@ export const createBlankCV = (indexNumber = 1): CVData => {
     fontFamily: 'inter',
     fontSize: 'base',
     lineSpacing: 'normal',
+    pageMargin: 20,
     showPhoto: false,
     sectionTitles: {
       summary: 'Professional Summary',
