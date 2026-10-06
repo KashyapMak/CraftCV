@@ -15,8 +15,16 @@ import {
   Palette,
   User,
   Sparkles,
-  Info
+  ShieldCheck,
+  Info,
+  Check,
+  CheckCircle2,
+  HelpCircle,
+  X,
+  Minimize2,
+  ArrowRight
 } from 'lucide-react';
+import { calculateSmartPageBreaks, SmartPageBreakResult } from '../utils/pageBreaks';
 
 interface Props {
   cv: CVData;
@@ -29,6 +37,7 @@ interface Props {
   onTogglePdfFooter?: (show: boolean) => void;
   onLoadSample?: () => void;
   onUpdatePageMargin?: (margin: PageMarginPreset) => void;
+  onUpdateCv?: (updated: CVData) => void;
 }
 
 export type PageMarginPreset = 14 | 20 | 26; // Compact, Standard, Spacious in mm
@@ -43,7 +52,8 @@ export const CvPreview: React.FC<Props> = ({
   showPdfFooter,
   onTogglePdfFooter,
   onLoadSample,
-  onUpdatePageMargin
+  onUpdatePageMargin,
+  onUpdateCv
 }) => {
   const [localPdfHeaderFooter, setLocalPdfHeaderFooter] = useState<boolean>(true);
   const isPdfHeaderFooterActive =
@@ -103,9 +113,17 @@ export const CvPreview: React.FC<Props> = ({
   const [fitScale, setFitScale] = useState<number>(0.85);
 
   const [showMarginGuides, setShowMarginGuides] = useState<boolean>(true);
+  const [smartBreaksEnabled, setSmartBreaksEnabled] = useState<boolean>(true);
 
   const [totalPages, setTotalPages] = useState<number>(1);
   const [selectedPageView, setSelectedPageView] = useState<'all' | 1 | 2 | 3>('all');
+
+  const [smartBreaks, setSmartBreaks] = useState<SmartPageBreakResult>(() => ({
+    totalPages: 1,
+    sliceHeightsMm: [297 - pageMarginMm, 297 - 2 * pageMarginMm, 297 - 2 * pageMarginMm],
+    sliceOffsetsMm: [0, 297 - pageMarginMm, (297 - pageMarginMm) + (297 - 2 * pageMarginMm)],
+    hasSmartAdjustment: false
+  }));
 
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -143,37 +161,24 @@ export const CvPreview: React.FC<Props> = ({
     };
   }, []);
 
-  // Measure content height against physical A4 dimensions taking margins into account
+  // Measure content height and compute intelligent non-chopping page breaks
   useEffect(() => {
     const calculatePages = () => {
       if (measureRef.current) {
-        const contentHeightPx = measureRef.current.scrollHeight;
-        // 1mm = 3.779527559px at standard 96 DPI screen resolution
-        const mmToPx = 3.779527559;
-
-        // Page 1 usable content height = (297mm - bottom margin)
-        const page1UsableMm = 297 - pageMarginMm;
-        const page1UsablePx = page1UsableMm * mmToPx;
-
-        // Page 2 & 3 usable content height = (297mm - top margin - bottom margin)
-        const nextPagesUsableMm = 297 - 2 * pageMarginMm;
-        const nextPagesUsablePx = nextPagesUsableMm * mmToPx;
-
-        // Threshold buffer: small overflow (under 25px) doesn't warrant a whole second page
-        if (contentHeightPx <= page1UsablePx + 25) {
-          setTotalPages(1);
-        } else {
-          const overflowPx = contentHeightPx - page1UsablePx;
-          const additional = Math.ceil(overflowPx / nextPagesUsablePx);
-          setTotalPages(Math.min(3, 1 + additional));
-        }
+        const result = calculateSmartPageBreaks(
+          measureRef.current,
+          pageMarginMm,
+          smartBreaksEnabled
+        );
+        setSmartBreaks(result);
+        setTotalPages(result.totalPages);
       }
     };
 
     calculatePages();
     const timer = setTimeout(calculatePages, 200);
     return () => clearTimeout(timer);
-  }, [effectiveCv, pageMarginMm]);
+  }, [effectiveCv, pageMarginMm, smartBreaksEnabled]);
 
   const activeScale = zoomMode === 'fit' ? fitScale : manualZoom / 100;
   const displayZoomPercent = Math.round(activeScale * 100);
@@ -192,9 +197,16 @@ export const CvPreview: React.FC<Props> = ({
     setZoomMode('fit');
   };
 
-  // Content slice heights
-  const page1ContentHeightMm = 297 - pageMarginMm;
-  const page2ContentHeightMm = 297 - 2 * pageMarginMm;
+  // Content slice heights and offsets dynamically determined by smart breaks
+  const p1HeightMm = smartBreaks.sliceHeightsMm[0] || 297 - pageMarginMm;
+  const p2OffsetMm = smartBreaks.sliceOffsetsMm[1] || 297 - pageMarginMm;
+  const p2HeightMm = smartBreaks.sliceHeightsMm[1] || 297 - 2 * pageMarginMm;
+  const p3OffsetMm = smartBreaks.sliceOffsetsMm[2] || p2OffsetMm + p2HeightMm;
+  const p3HeightMm = smartBreaks.sliceHeightsMm[2] || 297 - 2 * pageMarginMm;
+
+  // Aliases for layout compatibility
+  const page1ContentHeightMm = p1HeightMm;
+  const page2ContentHeightMm = p2HeightMm;
 
   const candidateName = effectiveCv.personalDetails.fullName || 'Candidate';
   const roleTitle = effectiveCv.personalDetails.jobTitle || 'Curriculum Vitae';
@@ -388,6 +400,48 @@ export const CvPreview: React.FC<Props> = ({
               Header &amp; Footer: <strong>{isPdfHeaderFooterActive ? 'ON' : 'OFF'}</strong>
             </span>
           </button>
+
+          {/* Smart Page Breaks Toggle */}
+          <button
+            type="button"
+            onClick={() => setSmartBreaksEnabled(!smartBreaksEnabled)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
+              smartBreaksEnabled
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+            }`}
+            title={
+              smartBreaksEnabled
+                ? 'Smart Page Break Protection is ON: detects sections and entries to prevent cutting lines or cards horizontally across pages. Click to toggle.'
+                : 'Smart Page Break Protection is OFF: using fixed geometric page cuts. Click to turn ON.'
+            }
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>
+              Smart Breaks: <strong>{smartBreaksEnabled ? 'ON' : 'OFF'}</strong>
+            </span>
+          </button>
+
+          {/* Auto-Fit 1-Page Quick Optimizer */}
+          {totalPages === 2 && onUpdateCv && (
+            <button
+              type="button"
+              onClick={() => {
+                onUpdateCv({
+                  ...cv,
+                  fontSize: 'sm',
+                  lineSpacing: 'compact',
+                  pageMargin: 14
+                });
+                if (onUpdatePageMargin) onUpdatePageMargin(14);
+              }}
+              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              title="Automatically adjust font size, line spacing and margins to 14mm so content cleanly fits onto 1 page without cutting"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Auto-Fit 1-Page</span>
+            </button>
+          )}
         </div>
 
         {/* Right: Page Switcher & Adaptive Width / Zoom Controls */}
@@ -613,7 +667,7 @@ export const CvPreview: React.FC<Props> = ({
                 maxHeight: `${page2ContentHeightMm}mm`
               }}
             >
-              <div style={{ marginTop: `-${page1ContentHeightMm}mm` }}>
+              <div style={{ marginTop: `-${p2OffsetMm}mm` }}>
                 <TemplateRenderer cv={effectiveCv} containerId={undefined} />
               </div>
             </div>
@@ -663,7 +717,7 @@ export const CvPreview: React.FC<Props> = ({
                 maxHeight: `${page2ContentHeightMm}mm`
               }}
             >
-              <div style={{ marginTop: `-${page1ContentHeightMm + page2ContentHeightMm}mm` }}>
+              <div style={{ marginTop: `-${p3OffsetMm}mm` }}>
                 <TemplateRenderer cv={effectiveCv} containerId={undefined} />
               </div>
             </div>
@@ -794,6 +848,14 @@ export const CvPreview: React.FC<Props> = ({
                 <span>•</span>
                 <span>Page 2 Top Margin: {pageMarginMm}mm</span>
               </div>
+
+              {/* Smart Page-Break Protection Status Badge */}
+              {smartBreaks.hasSmartAdjustment && smartBreaks.adjustedElementLabel && (
+                <div className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-3.5 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Smart Break Active: Preserved "{smartBreaks.adjustedElementLabel}" from being sliced</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -864,7 +926,7 @@ export const CvPreview: React.FC<Props> = ({
                   }}
                 >
                   {/* Shift content up by Page 1's content height */}
-                  <div style={{ marginTop: `-${page1ContentHeightMm}mm` }}>
+                  <div style={{ marginTop: `-${p2OffsetMm}mm` }}>
                     <TemplateRenderer cv={effectiveCv} containerId={undefined} />
                   </div>
                 </div>
@@ -981,7 +1043,7 @@ export const CvPreview: React.FC<Props> = ({
                     maxHeight: `${page2ContentHeightMm}mm`
                   }}
                 >
-                  <div style={{ marginTop: `-${page1ContentHeightMm + page2ContentHeightMm}mm` }}>
+                  <div style={{ marginTop: `-${p3OffsetMm}mm` }}>
                     <TemplateRenderer cv={effectiveCv} containerId={undefined} />
                   </div>
                 </div>

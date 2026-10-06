@@ -41,7 +41,8 @@ import {
   ArrowUp,
   ArrowDown,
   ListOrdered,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ShieldCheck
 } from 'lucide-react';
 import { isCvEmpty } from '../data/sampleCV';
 import { SectionTitleField } from './SectionTitleField';
@@ -2695,6 +2696,58 @@ export const CvEditor: React.FC<Props> = ({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Page Fit & PDF Cut Prevention Assistant */}
+            <div className="pt-2 border-t border-slate-200">
+              <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-800">
+                      PDF Cut Prevention &amp; Page Fit Assistant
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    Smart Breaks Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Automatic smart page breaking ensures that job entries, paragraphs, and headings are never sliced horizontally in half across pages. Margins are guaranteed on all sides from the 2nd page onwards even with Header &amp; Footer disabled.
+                </p>
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCv({
+                        fontSize: 'sm',
+                        lineSpacing: 'compact',
+                        pageMargin: 14
+                      })
+                    }
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    title="Compress font size, line spacing and margins to 14mm to fit cleanly on 1 page"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
+                    <span>Auto-Fit to 1 Page</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCv({
+                        fontSize: 'base',
+                        lineSpacing: 'normal',
+                        pageMargin: 20
+                      })
+                    }
+                    className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                    title="Reset to recommended standard font size, normal spacing and 20mm margins"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Reset to Standard Fit</span>
+                  </button>
+                </div>
               </div>
             </div>
 

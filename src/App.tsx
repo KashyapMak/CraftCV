@@ -772,6 +772,7 @@ export default function App() {
                 onTogglePdfFooter={handleTogglePdfHeaderFooter}
                 onLoadSample={handleLoadAlexanderWrightSample}
                 onUpdatePageMargin={(margin) => handleUpdateCv({ ...activeCv, pageMargin: margin })}
+                onUpdateCv={handleUpdateCv}
               />
             </div>
           </div>

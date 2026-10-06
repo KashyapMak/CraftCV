@@ -85,16 +85,18 @@ export const exportDirectPdf = async (
       for (let i = 0; i < pageSheets.length; i++) {
         const sheet = pageSheets[i];
 
-        // Clone offscreen to eliminate any scale transforms or parent constraints
+        // Clone offscreen behind the document to eliminate any scale transforms or parent constraints
         const clone = sheet.cloneNode(true) as HTMLElement;
         clone.style.transform = 'none';
         clone.style.position = 'fixed';
-        clone.style.left = '-9999px';
+        clone.style.left = '0px';
         clone.style.top = '0px';
         clone.style.width = '210mm';
-        clone.style.height = pageSheets.length === 1 ? 'auto' : '297mm';
+        clone.style.height = '297mm';
         clone.style.minHeight = '297mm';
-        clone.style.zIndex = '-9999';
+        clone.style.maxHeight = '297mm';
+        clone.style.zIndex = '-99999';
+        clone.style.pointerEvents = 'none';
         clone.style.margin = '0';
         clone.style.display = 'flex';
         clone.style.flexDirection = 'column';
@@ -168,7 +170,15 @@ export const exportDirectPdf = async (
             useCORS: true,
             logging: false,
             allowTaint: true,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            windowWidth: 1200,
+            windowHeight: 1600,
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
+            width: clone.offsetWidth || 794,
+            height: clone.offsetHeight || 1123
           });
 
           const imgData = canvas.toDataURL('image/jpeg', 0.95);
