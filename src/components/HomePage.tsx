@@ -25,6 +25,7 @@ interface Props {
   onStartSample: () => void;
   onSelectTemplateToStart: (templateId: string) => void;
   onOpenDashboard: () => void;
+  onResumeActiveCv?: () => void;
   onPreviewTemplate?: (templateId: string) => void;
 }
 
@@ -35,6 +36,7 @@ export const HomePage: React.FC<Props> = ({
   onStartSample,
   onSelectTemplateToStart,
   onOpenDashboard,
+  onResumeActiveCv,
   onPreviewTemplate
 }) => {
   return (
@@ -54,7 +56,17 @@ export const HomePage: React.FC<Props> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {totalExistingCvs > 0 && onResumeActiveCv && (
+              <button
+                type="button"
+                onClick={onResumeActiveCv}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 transition cursor-pointer flex items-center gap-1.5"
+                title="Go directly to CV Editor"
+              >
+                <span>Open Editor</span>
+              </button>
+            )}
             {totalExistingCvs > 0 && (
               <button
                 type="button"
@@ -100,13 +112,28 @@ export const HomePage: React.FC<Props> = ({
 
           {/* CTA Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            {totalExistingCvs > 0 && onResumeActiveCv && (
+              <button
+                type="button"
+                onClick={onResumeActiveCv}
+                className="w-full sm:w-auto px-7 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span>Continue Editing CV</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onStartBlank}
-              className="w-full sm:w-auto px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+              className={`w-full sm:w-auto px-7 py-3.5 ${
+                totalExistingCvs > 0 && onResumeActiveCv
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              } text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2`}
             >
               <Zap className="w-4 h-4" />
-              <span>Create Free CV Now</span>
+              <span>{totalExistingCvs > 0 ? 'Create New CV' : 'Create Free CV Now'}</span>
             </button>
 
             <button

@@ -49,8 +49,8 @@ export default function App() {
   const [activeCvId, setActiveId] = useState<string>(() => getActiveCvId());
   const [settings, setSettings] = useState<AppSettings>(() => getAppSettings());
 
-  // Page routing: 'home' or 'builder'
-  const [currentPage, setCurrentPage] = useState<'home' | 'builder'>('builder');
+  // Page routing: 'home' or 'builder' - Default to 'home' so app loads with home page
+  const [currentPage, setCurrentPage] = useState<'home' | 'builder'>('home');
 
   // Layout mode inside builder: 'split' (side by side), 'editor' (editor only), 'preview' (preview only)
   const [layoutMode, setLayoutMode] = useState<'split' | 'editor' | 'preview'>('split');
@@ -307,6 +307,7 @@ export default function App() {
           maxLimit={settings.maxCvLimit}
           onStartBlank={() => handleCreateNew(false)}
           onStartSample={() => handleCreateNew(true)}
+          onResumeActiveCv={() => setCurrentPage('builder')}
           onOpenDashboard={() => setIsDashboardOpen(true)}
           onSelectTemplateToStart={(tplId: string) => handleCreateFromTemplate(tplId)}
           onPreviewTemplate={handlePreviewTemplateFromHome}
