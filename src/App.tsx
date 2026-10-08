@@ -19,7 +19,7 @@ import {
 import { Header } from './components/Header';
 import { CvEditor } from './components/CvEditor';
 
-export type ExportFormatType = 'pdf' | 'docx' | 'html' | 'json';
+export type ExportFormatType = 'pdf' | 'docx' | 'doc' | 'html' | 'json';
 import { CvPreview } from './components/CvPreview';
 import { AtsStrengthMeter } from './components/AtsStrengthMeter';
 import { TemplatePickerModal } from './components/TemplatePickerModal';
@@ -30,7 +30,7 @@ import { CvDashboardModal } from './components/CvDashboardModal';
 import { HomePage } from './components/HomePage';
 import { TemplateRenderer } from './templates/TemplateRenderer';
 import { ALEXANDER_WRIGHT_SAMPLE_CV } from './data/sampleCV';
-import { exportDirectPdf, exportToDocx, exportStandaloneHtml } from './utils/exportCv';
+import { exportDirectPdf, exportToDocx, exportWordHtmlDocument, exportStandaloneHtml, normalizeTemplateId } from './utils/exportCv';
 import {
   Eye,
   Edit3,
@@ -240,6 +240,12 @@ export default function App() {
       setIsExporting('docx');
       await exportToDocx(activeCv);
       setIsExporting(null);
+    } else if (format === 'doc') {
+      setIsExporting('doc');
+      const safeName = (activeCv.personalDetails.fullName || 'cv').toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const templateTag = normalizeTemplateId(activeCv.templateId);
+      exportWordHtmlDocument(activeCv, `${safeName}_${templateTag}_resume.doc`);
+      setIsExporting(null);
     } else if (format === 'html') {
       const el = document.getElementById('cv-printable-document');
       if (el) {
@@ -261,6 +267,8 @@ export default function App() {
         return 'PDF Document (.pdf)';
       case 'docx':
         return 'Microsoft Word (.docx)';
+      case 'doc':
+        return 'Word Office Document (.doc)';
       case 'html':
         return 'Web Page (.html)';
       case 'json':
@@ -279,6 +287,8 @@ export default function App() {
         return <Download className="w-3.5 h-3.5 text-rose-600" />;
       case 'docx':
         return <FileDown className="w-3.5 h-3.5 text-blue-600" />;
+      case 'doc':
+        return <FileDown className="w-3.5 h-3.5 text-cyan-600" />;
       case 'html':
         return <Code className="w-3.5 h-3.5 text-emerald-600" />;
       case 'json':
@@ -564,7 +574,7 @@ export default function App() {
                           </div>
                         </button>
 
-                        {/* Word */}
+                        {/* Word docx */}
                         <button
                           onClick={() => handleSelectAndExport('docx')}
                           className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
@@ -577,7 +587,25 @@ export default function App() {
                           <div className="flex-1">
                             <div className="font-bold">Microsoft Word (.docx)</div>
                             <div className="text-[10px] text-slate-400 font-normal">
-                              Real OpenXML .docx file matching CV structure
+                              Real OpenXML .docx matching selected template layout
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Word doc */}
+                        <button
+                          onClick={() => handleSelectAndExport('doc')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition cursor-pointer ${
+                            exportFormat === 'doc'
+                              ? 'bg-indigo-50 text-indigo-700 font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <FileDown className="w-4 h-4 text-cyan-600 shrink-0" />
+                          <div className="flex-1">
+                            <div className="font-bold">Word Document (.doc)</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              Word Office HTML format (100% styled for Word, Pages, Docs)
                             </div>
                           </div>
                         </button>
@@ -680,7 +708,12 @@ export default function App() {
                   ) : exportFormat === 'docx' ? (
                     <>
                       <FileDown className="w-3.5 h-3.5" />
-                      <span>Download Word</span>
+                      <span>Download Word (.docx)</span>
+                    </>
+                  ) : exportFormat === 'doc' ? (
+                    <>
+                      <FileDown className="w-3.5 h-3.5" />
+                      <span>Download Word (.doc)</span>
                     </>
                   ) : exportFormat === 'html' ? (
                     <>

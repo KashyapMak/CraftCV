@@ -85,8 +85,8 @@ export const TemplatePickerModal: React.FC<Props> = ({
       if (previewMeasureRef.current) {
         const height = previewMeasureRef.current.scrollHeight;
         const a4PageHeightPx = 1123;
-        const pages = Math.max(1, Math.ceil((height - 20) / a4PageHeightPx));
-        setTotalPages(Math.min(pages, 3));
+        const pages = Math.min(3, Math.max(1, Math.ceil((height - 20) / a4PageHeightPx)));
+        setTotalPages((prev) => (prev === pages ? prev : pages));
       }
     };
 
@@ -103,7 +103,8 @@ export const TemplatePickerModal: React.FC<Props> = ({
         const a4WidthPx = 794;
         const availableWidth = containerWidth - 48;
         const scale = Math.min(1.05, Math.max(0.6, availableWidth / a4WidthPx));
-        setPreviewZoom(Math.round(scale * 100));
+        const newZoom = Math.round(scale * 100);
+        setPreviewZoom((prev) => (prev === newZoom ? prev : newZoom));
       }
     };
 

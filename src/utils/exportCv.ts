@@ -5,9 +5,18 @@ import {
   Paragraph,
   TextRun,
   BorderStyle,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  ShadingType,
+  AlignmentType,
 } from 'docx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
+import HTMLtoDOCX from '@turbodocx/html-to-docx';
+import { getSectionTitle } from './sectionTitles';
+import { getOrderedSections } from './sectionOrder';
 
 /**
  * Checks if running inside an iframe or sandboxed environment
@@ -266,9 +275,37 @@ const escapeHtml = (text?: string): string => {
 /**
  * Returns CSS font family string corresponding to selected CV font
  */
+/**
+ * Normalizes any template ID or alias into a canonical template ID
+ */
+export const normalizeTemplateId = (templateId?: string): string => {
+  const tid = (templateId || 'modern-executive').toLowerCase();
+  if (tid.includes('creative')) return 'creative-split';
+  if (tid.includes('sandstone')) return 'sandstone-executive';
+  if (tid.includes('geneva')) return 'geneva-grid';
+  if (tid.includes('botanical')) return 'botanical-terracotta';
+  if (tid.includes('nordic')) return 'nordic-contrast';
+  if (tid.includes('silicon')) return 'silicon-accent';
+  if (tid.includes('edinburgh') || tid.includes('timeline')) return 'edinburgh-timeline';
+  if (tid.includes('cambridge')) return 'cambridge-accent';
+  if (tid.includes('london') || tid.includes('corporate')) return 'london-corporate';
+  if (tid.includes('tech')) return 'tech-compact';
+  if (tid.includes('academic')) return 'academic-classic';
+  if (tid.includes('minimalist')) return 'minimalist-clean';
+  return 'modern-executive';
+};
+
+/**
+ * Returns CSS font family string corresponding to selected CV font and template
+ */
 const getHtmlFontFamily = (fontFamily?: string, templateId?: string): string => {
-  if (templateId === 'academic') return "'EB Garamond', Georgia, serif";
-  if (templateId === 'tech') return "Consolas, 'Courier New', monospace";
+  const norm = normalizeTemplateId(templateId);
+  if (norm === 'academic-classic' || norm === 'botanical-terracotta') {
+    return "'EB Garamond', Georgia, serif";
+  }
+  if (norm === 'tech-compact') {
+    return "Consolas, 'Courier New', monospace";
+  }
 
   switch (fontFamily) {
     case 'garamond':
@@ -287,14 +324,14 @@ const getHtmlFontFamily = (fontFamily?: string, templateId?: string): string => 
 
 /**
  * Builds rich, template-faithful HTML representing what is rendered in the live preview
- * with inline styles optimized for Word OpenXML conversion via html-to-docx
+ * with inline styles optimized for Word OpenXML conversion via html-to-docx and Word Office HTML
  */
 export const renderTemplateToWordHtml = (cv: CVData): string => {
   const p = cv.personalDetails;
   const fullName = escapeHtml(p.fullName || 'Candidate Name');
   const role = escapeHtml(p.jobTitle || 'Professional Role');
   const theme = cv.themeColor || '#2563eb';
-  const templateId = cv.templateId || 'modern';
+  const templateId = normalizeTemplateId(cv.templateId);
   const font = getHtmlFontFamily(cv.fontFamily, templateId);
 
   const contactList: string[] = [];
@@ -305,34 +342,20 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   if (p.website) contactList.push(escapeHtml(p.website));
   if (p.github) contactList.push(escapeHtml(p.github));
 
-  // Common Section Renderers
-  const renderSummaryHtml = (accentColor: string) => {
-    if (!cv.summary) return '';
-    return `
-      <div style="margin-bottom: 16px;">
-        <h2 style="color: ${accentColor}; font-size: 13pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">
-          Professional Summary
-        </h2>
-        <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0;">
-          ${escapeHtml(cv.summary)}
-        </p>
-      </div>
-    `;
-  };
-
-  const renderExperienceHtml = (itemStyle = '') => {
+  // Common Section Content Builders
+  const renderExperienceHtml = (itemStyle = '', accentColor = theme) => {
     if (!cv.experiences || cv.experiences.length === 0) return '';
-    const items = cv.experiences.map((exp) => {
+    return cv.experiences.map((exp) => {
       const dates = `${escapeHtml(exp.startDate)} – ${exp.isCurrent ? 'Present' : escapeHtml(exp.endDate || '')}${exp.location ? ` | ${escapeHtml(exp.location)}` : ''}`;
       const bullets = (exp.highlights || [])
         .filter((h) => h.trim())
-        .map((h) => `<li style="font-size: 10pt; color: #334155; margin-bottom: 3px;">${escapeHtml(h)}</li>`)
+        .map((h) => `<li style="font-size: 10pt; color: #334155; margin-bottom: 3px; line-height: 1.45;">${escapeHtml(h)}</li>`)
         .join('');
 
       return `
         <div style="margin-bottom: 14px; ${itemStyle}">
           <p style="font-size: 11pt; font-weight: bold; color: #0f172a; margin: 0;">
-            ${escapeHtml(exp.jobTitle)} — <span style="color: ${theme};">${escapeHtml(exp.employer)}</span>
+            ${escapeHtml(exp.jobTitle)} — <span style="color: ${accentColor}; font-weight: bold;">${escapeHtml(exp.employer)}</span>
           </p>
           <p style="font-size: 9.5pt; color: #64748b; margin: 2px 0 6px 0; font-weight: bold;">
             ${dates}
@@ -341,13 +364,11 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         </div>
       `;
     }).join('');
-
-    return items;
   };
 
   const renderEducationHtml = (itemStyle = '') => {
     if (!cv.educations || cv.educations.length === 0) return '';
-    const items = cv.educations.map((edu) => {
+    return cv.educations.map((edu) => {
       const dates = `${escapeHtml(edu.startDate)} – ${edu.isCurrent ? 'Present' : escapeHtml(edu.endDate || '')}${edu.location ? ` | ${escapeHtml(edu.location)}` : ''}`;
       return `
         <div style="margin-bottom: 12px; ${itemStyle}">
@@ -355,17 +376,15 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
             ${escapeHtml(edu.degree)}${edu.fieldOfStudy ? ` in ${escapeHtml(edu.fieldOfStudy)}` : ''} — <span style="color: #475569;">${escapeHtml(edu.school)}</span>
           </p>
           <p style="font-size: 9.5pt; color: #64748b; margin: 2px 0 2px 0;">${dates}</p>
-          ${edu.grade ? `<p style="font-size: 9.5pt; color: #64748b; margin: 0;">Grade / Classification: ${escapeHtml(edu.grade)}</p>` : ''}
+          ${edu.grade ? `<p style="font-size: 9.5pt; color: #64748b; margin: 0; font-style: italic;">Grade / Classification: ${escapeHtml(edu.grade)}</p>` : ''}
         </div>
       `;
     }).join('');
-
-    return items;
   };
 
-  const renderProjectsHtml = (itemStyle = '') => {
+  const renderProjectsHtml = (itemStyle = '', accentColor = theme) => {
     if (!cv.projects || cv.projects.length === 0) return '';
-    const items = cv.projects.map((proj) => {
+    return cv.projects.map((proj) => {
       const bullets = (proj.highlights || [])
         .filter((h) => h.trim())
         .map((h) => `<li style="font-size: 10pt; color: #334155; margin-bottom: 3px;">${escapeHtml(h)}</li>`)
@@ -378,51 +397,47 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
       return `
         <div style="margin-bottom: 12px; ${itemStyle}">
           <p style="font-size: 11pt; font-weight: bold; color: #0f172a; margin: 0;">
-            ${escapeHtml(proj.title)}${proj.subtitle ? ` — <span style="color: ${theme};">${escapeHtml(proj.subtitle)}</span>` : ''}
+            ${escapeHtml(proj.title)}${proj.subtitle ? ` — <span style="color: ${accentColor};">${escapeHtml(proj.subtitle)}</span>` : ''}
           </p>
           ${descHtml}
           ${bullets ? `<ul style="margin: 4px 0 0 0; padding-left: 18px;">${bullets}</ul>` : ''}
         </div>
       `;
     }).join('');
-
-    return items;
   };
 
   const renderSkillsHtml = () => {
     if (!cv.skills || cv.skills.length === 0) return '';
-    const items = cv.skills.map((sk) => `
-      <p style="font-size: 10pt; margin: 0 0 4px 0;">
+    return cv.skills.map((sk) => `
+      <p style="font-size: 10pt; margin: 0 0 5px 0;">
         <strong style="color: #0f172a;">${escapeHtml(sk.category)}:</strong>
         <span style="color: #334155;"> ${escapeHtml(sk.items.join(', '))}</span>
       </p>
     `).join('');
-    return items;
   };
 
   const renderCertificationsHtml = () => {
     if (!cv.certifications || cv.certifications.length === 0) return '';
-    const items = cv.certifications.map((cert) => `
+    return cv.certifications.map((cert) => `
       <p style="font-size: 10pt; margin: 0 0 4px 0;">
         <strong style="color: #0f172a;">${escapeHtml(cert.name)}</strong>
         ${cert.issuer ? `<span style="color: #475569;"> — ${escapeHtml(cert.issuer)}</span>` : ''}
         ${cert.issueDate ? `<span style="color: #64748b;"> (${escapeHtml(cert.issueDate)})</span>` : ''}
       </p>
     `).join('');
-    return items;
   };
 
   const renderLanguagesHtml = () => {
     if (!cv.languages || cv.languages.length === 0) return '';
     const text = cv.languages.map((l) => `${escapeHtml(l.language)} (${escapeHtml(l.proficiency)})`).join('   •   ');
-    return `<p style="font-size: 10pt; color: #334155; margin: 0;">${text}</p>`;
+    return `<p style="font-size: 10pt; color: #334155; margin: 0 0 4px 0;">${text}</p>`;
   };
 
-  const renderCustomSectionsHtml = (accentColor: string) => {
+  const renderCustomSectionsHtml = (accentColor = theme) => {
     if (!cv.customSections || cv.customSections.length === 0) return '';
     return cv.customSections.map((sec) => `
       <div style="margin-bottom: 16px;">
-        <h2 style="color: ${accentColor}; font-size: 13pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">
+        <h2 style="color: ${accentColor}; font-size: 12.5pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">
           ${escapeHtml(sec.sectionTitle)}
         </h2>
         ${sec.items.map((item) => `
@@ -438,28 +453,27 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   };
 
   // =========================================================================
-  // 1. CREATIVE SPLIT TEMPLATE
-  // 2-Column table with full colored sidebar on left matching live preview
+  // 1. CREATIVE SPLIT TEMPLATE (2-Column Table, Left Sidebar in Theme Color)
   // =========================================================================
-  if (templateId === 'creative') {
+  if (templateId === 'creative-split') {
     const sidebarSkills = cv.skills && cv.skills.length > 0 ? `
-      <div style="margin-top: 16px;">
-        <p style="color: #ffffff; font-size: 11pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 3px; margin: 0 0 8px 0;">
-          SKILLS
+      <div style="margin-top: 18px;">
+        <p style="color: #ffffff; font-size: 11pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 4px; margin: 0 0 10px 0;">
+          ${escapeHtml(getSectionTitle(cv, 'skills', 'Expertise'))}
         </p>
         ${cv.skills.map((s) => `
-          <p style="font-size: 9.5pt; margin: 0 0 4px 0;">
-            <strong style="color: #ffffff;">${escapeHtml(s.category)}:</strong>
-            <span style="color: #f1f5f9;"> ${escapeHtml(s.items.join(', '))}</span>
-          </p>
+          <div style="margin-bottom: 8px;">
+            <p style="color: #ffffff; font-size: 9.5pt; font-weight: bold; margin: 0 0 2px 0;">${escapeHtml(s.category)}</p>
+            <p style="font-size: 9pt; color: #f1f5f9; margin: 0;">${escapeHtml(s.items.join(', '))}</p>
+          </div>
         `).join('')}
       </div>
     ` : '';
 
     const sidebarLanguages = cv.languages && cv.languages.length > 0 ? `
       <div style="margin-top: 16px;">
-        <p style="color: #ffffff; font-size: 11pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 3px; margin: 0 0 8px 0;">
-          LANGUAGES
+        <p style="color: #ffffff; font-size: 11pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 4px; margin: 0 0 8px 0;">
+          ${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}
         </p>
         ${cv.languages.map((l) => `<p style="font-size: 9.5pt; color: #f8fafc; margin: 0 0 3px 0;">${escapeHtml(l.language)} (${escapeHtml(l.proficiency)})</p>`).join('')}
       </div>
@@ -467,10 +481,10 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
 
     const sidebarCerts = cv.certifications && cv.certifications.length > 0 ? `
       <div style="margin-top: 16px;">
-        <p style="color: #ffffff; font-size: 11pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 3px; margin: 0 0 8px 0;">
-          CERTIFICATIONS
+        <p style="color: #ffffff; font-size: 11pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 4px; margin: 0 0 8px 0;">
+          ${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}
         </p>
-        ${cv.certifications.map((c) => `<p style="font-size: 9.5pt; color: #f8fafc; margin: 0 0 3px 0;"><strong>${escapeHtml(c.name)}</strong>${c.issuer ? ` — ${escapeHtml(c.issuer)}` : ''}</p>`).join('')}
+        ${cv.certifications.map((c) => `<p style="font-size: 9.5pt; color: #f8fafc; margin: 0 0 4px 0;"><strong>${escapeHtml(c.name)}</strong>${c.issuer ? ` — ${escapeHtml(c.issuer)}` : ''}</p>`).join('')}
       </div>
     ` : '';
 
@@ -481,28 +495,28 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         <meta charset="utf-8">
         <style>
           body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
-          table { width: 650px; border-collapse: collapse; }
+          table { width: 100%; border-collapse: collapse; }
           ul { margin: 4px 0 8px 0; padding-left: 18px; }
           li { font-size: 10pt; margin-bottom: 3px; }
         </style>
       </head>
       <body>
-        <table>
+        <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <!-- Left Sidebar -->
-            <td style="width: 210px; background-color: ${theme}; color: #ffffff; padding: 20px 16px; vertical-align: top;">
-              <h1 style="color: #ffffff; font-size: 20pt; font-weight: bold; margin: 0 0 4px 0;">
+            <!-- Left Colored Sidebar -->
+            <td style="width: 32%; background-color: ${theme}; color: #ffffff; padding: 22px 18px; vertical-align: top;">
+              <h1 style="color: #ffffff; font-size: 22pt; font-weight: bold; margin: 0 0 4px 0; line-height: 1.2;">
                 ${fullName}
               </h1>
-              <p style="color: #e0e7ff; font-size: 10pt; font-weight: bold; margin: 0 0 16px 0; text-transform: uppercase;">
+              <p style="color: #e0e7ff; font-size: 10.5pt; font-weight: bold; margin: 0 0 18px 0; text-transform: uppercase; letter-spacing: 0.5px;">
                 ${role}
               </p>
               
-              <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px; margin-bottom: 16px;">
-                <p style="color: #ffffff; font-size: 10.5pt; font-weight: bold; margin: 0 0 6px 0;">CONTACT</p>
+              <div style="border-top: 1px solid rgba(255,255,255,0.35); padding-top: 10px; margin-bottom: 16px;">
+                <p style="color: #ffffff; font-size: 10.5pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">CONTACT</p>
                 ${p.email ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">Email: ${escapeHtml(p.email)}</p>` : ''}
-                ${p.phone ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">Tel: ${escapeHtml(p.phone)}</p>` : ''}
-                ${p.location ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">Loc: ${escapeHtml(p.location)}</p>` : ''}
+                ${p.phone ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">Phone: ${escapeHtml(p.phone)}</p>` : ''}
+                ${p.location ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">Location: ${escapeHtml(p.location)}</p>` : ''}
                 ${p.linkedin ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">LinkedIn: ${escapeHtml(p.linkedin)}</p>` : ''}
                 ${p.github ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">GitHub: ${escapeHtml(p.github)}</p>` : ''}
                 ${p.website ? `<p style="font-size: 9pt; color: #f8fafc; margin: 0 0 4px 0;">Web: ${escapeHtml(p.website)}</p>` : ''}
@@ -514,38 +528,38 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
             </td>
 
             <!-- Right Main Area -->
-            <td style="width: 440px; background-color: #ffffff; color: #1e293b; padding: 20px; vertical-align: top;">
+            <td style="width: 68%; background-color: #ffffff; color: #1e293b; padding: 22px 24px; vertical-align: top;">
               ${cv.summary ? `
-                <div style="margin-bottom: 16px;">
-                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 13pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
-                    Professional Summary
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 12.5pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'summary', 'Professional Summary'))}
                   </h2>
                   <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0;">${escapeHtml(cv.summary)}</p>
                 </div>
               ` : ''}
 
               ${cv.experiences && cv.experiences.length > 0 ? `
-                <div style="margin-bottom: 16px;">
-                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 13pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
-                    Work Experience
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 12.5pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'experience', 'Work Experience'))}
                   </h2>
-                  ${renderExperienceHtml()}
+                  ${renderExperienceHtml('', theme)}
                 </div>
               ` : ''}
 
               ${cv.projects && cv.projects.length > 0 ? `
-                <div style="margin-bottom: 16px;">
-                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 13pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
-                    Projects
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 12.5pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}
                   </h2>
-                  ${renderProjectsHtml()}
+                  ${renderProjectsHtml('', theme)}
                 </div>
               ` : ''}
 
               ${cv.educations && cv.educations.length > 0 ? `
-                <div style="margin-bottom: 16px;">
-                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 13pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
-                    Education
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${theme}; border-bottom: 2px solid ${theme}; font-size: 12.5pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}
                   </h2>
                   ${renderEducationHtml()}
                 </div>
@@ -561,10 +575,24 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 2. CAMBRIDGE ACCENT TEMPLATE
-  // Top colored header banner with monogram/role and framed section titles
+  // 2. NORDIC CONTRAST TEMPLATE (Deep Midnight Slate Sidebar, Tabular Timeline)
   // =========================================================================
-  if (templateId === 'cambridge') {
+  if (templateId === 'nordic-contrast') {
+    const initials = fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+    const sidebarSkills = cv.skills && cv.skills.length > 0 ? `
+      <div style="margin-top: 18px;">
+        <p style="color: #ffffff; font-size: 10.5pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 4px; margin: 0 0 8px 0;">
+          ${escapeHtml(getSectionTitle(cv, 'skills', 'Expertise'))}
+        </p>
+        ${cv.skills.map((s) => `
+          <div style="margin-bottom: 8px;">
+            <p style="color: #e2e8f0; font-size: 9pt; font-weight: bold; margin: 0 0 2px 0;">${escapeHtml(s.category)}</p>
+            <p style="font-size: 8.5pt; color: #cbd5e1; margin: 0;">${escapeHtml(s.items.join(', '))}</p>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
     return `
       <!DOCTYPE html>
       <html>
@@ -572,56 +600,347 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         <meta charset="utf-8">
         <style>
           body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
-          .banner-table { width: 650px; background-color: ${theme}; color: #ffffff; margin-bottom: 16px; border-collapse: collapse; }
-          .section-header { border-left: 4px solid ${theme}; padding-left: 10px; color: ${theme}; font-weight: bold; font-size: 12.5pt; text-transform: uppercase; margin: 16px 0 8px 0; }
+          table { width: 100%; border-collapse: collapse; }
           ul { margin: 4px 0 8px 0; padding-left: 18px; }
           li { font-size: 10pt; margin-bottom: 3px; }
         </style>
       </head>
       <body>
-        <table class="banner-table">
+        <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 22px; color: #ffffff;">
-              <h1 style="color: #ffffff; font-size: 22pt; font-weight: bold; margin: 0 0 4px 0;">${fullName}</h1>
-              <p style="color: #f1f5f9; font-size: 11pt; font-weight: bold; margin: 0 0 10px 0;">${role}</p>
-              <p style="color: #e2e8f0; font-size: 9.5pt; margin: 0;">${contactList.join('   •   ')}</p>
+            <!-- Left Midnight Slate Sidebar -->
+            <td style="width: 32%; background-color: #2d3748; color: #ffffff; padding: 24px 18px; vertical-align: top;">
+              <div style="text-align: center; margin-bottom: 14px;">
+                <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; background-color: #4a5568; color: #ffffff; font-weight: bold; font-size: 18pt; border-radius: 24px; text-align: center; border: 2px solid rgba(255,255,255,0.3);">
+                  ${initials}
+                </div>
+              </div>
+              <h1 style="color: #ffffff; font-size: 20pt; font-weight: bold; margin: 0 0 4px 0; text-align: center; line-height: 1.2;">
+                ${fullName}
+              </h1>
+              <p style="color: #cbd5e1; font-size: 9.5pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0 0 16px 0; letter-spacing: 0.5px;">
+                ${role}
+              </p>
+
+              <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-bottom: 14px;">
+                <p style="color: #ffffff; font-size: 10pt; font-weight: bold; margin: 0 0 6px 0;">CONTACT</p>
+                ${p.email ? `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 4px 0;">Email: ${escapeHtml(p.email)}</p>` : ''}
+                ${p.phone ? `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 4px 0;">Phone: ${escapeHtml(p.phone)}</p>` : ''}
+                ${p.location ? `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 4px 0;">Location: ${escapeHtml(p.location)}</p>` : ''}
+                ${p.linkedin ? `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 4px 0;">LinkedIn: ${escapeHtml(p.linkedin)}</p>` : ''}
+                ${p.github ? `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 4px 0;">GitHub: ${escapeHtml(p.github)}</p>` : ''}
+                ${p.website ? `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 4px 0;">Web: ${escapeHtml(p.website)}</p>` : ''}
+              </div>
+
+              ${sidebarSkills}
+              ${cv.languages && cv.languages.length > 0 ? `
+                <div style="margin-top: 16px;">
+                  <p style="color: #ffffff; font-size: 10.5pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 4px; margin: 0 0 6px 0;">LANGUAGES</p>
+                  ${cv.languages.map((l) => `<p style="font-size: 8.5pt; color: #e2e8f0; margin: 0 0 3px 0;">${escapeHtml(l.language)} (${escapeHtml(l.proficiency)})</p>`).join('')}
+                </div>
+              ` : ''}
+            </td>
+
+            <!-- Right Tabular Main Area -->
+            <td style="width: 68%; background-color: #ffffff; color: #1e293b; padding: 24px; vertical-align: top;">
+              ${cv.summary ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #2d3748; border-bottom: 2px solid #2d3748; font-size: 12pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'summary', 'Professional Summary'))}
+                  </h2>
+                  <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0;">${escapeHtml(cv.summary)}</p>
+                </div>
+              ` : ''}
+
+              ${cv.experiences && cv.experiences.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #2d3748; border-bottom: 2px solid #2d3748; font-size: 12pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'experience', 'Experience'))}
+                  </h2>
+                  ${cv.experiences.map((exp) => `
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+                      <tr>
+                        <td style="width: 25%; font-size: 9pt; font-weight: bold; color: #64748b; vertical-align: top; padding-right: 8px;">
+                          ${escapeHtml(exp.startDate)} –<br/>${exp.isCurrent ? 'Present' : escapeHtml(exp.endDate || '')}
+                        </td>
+                        <td style="width: 75%; vertical-align: top;">
+                          <p style="font-size: 10.5pt; font-weight: bold; color: #0f172a; margin: 0;">
+                            ${escapeHtml(exp.jobTitle)} — <span style="color: #2d3748;">${escapeHtml(exp.employer)}</span>
+                          </p>
+                          ${(exp.highlights && exp.highlights.length > 0) ? `
+                            <ul style="margin: 4px 0 0 0; padding-left: 16px;">
+                              ${exp.highlights.filter((h) => h.trim()).map((h) => `<li style="font-size: 9.5pt; color: #334155; margin-bottom: 2px;">${escapeHtml(h)}</li>`).join('')}
+                            </ul>
+                          ` : ''}
+                        </td>
+                      </tr>
+                    </table>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              ${cv.educations && cv.educations.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #2d3748; border-bottom: 2px solid #2d3748; font-size: 12pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}
+                  </h2>
+                  ${renderEducationHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.projects && cv.projects.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #2d3748; border-bottom: 2px solid #2d3748; font-size: 12pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}
+                  </h2>
+                  ${renderProjectsHtml()}
+                </div>
+              ` : ''}
+
+              ${renderCustomSectionsHtml('#2d3748')}
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+  }
+
+  // =========================================================================
+  // 3. SANDSTONE EXECUTIVE TEMPLATE (Warm Sand Header, 2-Column, Accent Footer)
+  // =========================================================================
+  if (templateId === 'sandstone-executive') {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
+          table { width: 100%; border-collapse: collapse; }
+          ul { margin: 4px 0 8px 0; padding-left: 18px; }
+          li { font-size: 10pt; margin-bottom: 3px; }
+        </style>
+      </head>
+      <body>
+        <!-- Header Banner Block -->
+        <table style="width: 100%; background-color: #f7f4ee; border-top: 6px solid ${theme}; border-bottom: 2px solid ${theme}; margin-bottom: 16px; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 20px 22px;">
+              <h1 style="color: #1e293b; font-size: 24pt; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase;">
+                ${fullName}
+              </h1>
+              <p style="color: ${theme}; font-size: 12pt; font-weight: bold; text-transform: uppercase; margin: 0 0 10px 0; letter-spacing: 0.5px;">
+                ${role}
+              </p>
+              <p style="color: #64748b; font-size: 9.5pt; margin: 0;">${contactList.join('   •   ')}</p>
             </td>
           </tr>
         </table>
 
+        <!-- 2-Column Body -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+          <tr>
+            <!-- Left Column: Education & Skills -->
+            <td style="width: 35%; padding-right: 18px; vertical-align: top; border-right: 1px solid #e2e8f0;">
+              ${cv.educations && cv.educations.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}
+                  </h2>
+                  ${renderEducationHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.skills && cv.skills.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'skills', 'Key Skills'))}
+                  </h2>
+                  ${renderSkillsHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.certifications && cv.certifications.length > 0 ? `
+                <div style="margin-bottom: 16px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}
+                  </h2>
+                  ${renderCertificationsHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.languages && cv.languages.length > 0 ? `
+                <div style="margin-bottom: 16px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}
+                  </h2>
+                  ${renderLanguagesHtml()}
+                </div>
+              ` : ''}
+            </td>
+
+            <!-- Right Column: Summary, Experience, Projects -->
+            <td style="width: 65%; padding-left: 20px; vertical-align: top;">
+              ${cv.summary ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'summary', 'Executive Profile'))}
+                  </h2>
+                  <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0;">${escapeHtml(cv.summary)}</p>
+                </div>
+              ` : ''}
+
+              ${cv.experiences && cv.experiences.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'experience', 'Experience'))}
+                  </h2>
+                  ${renderExperienceHtml('', theme)}
+                </div>
+              ` : ''}
+
+              ${cv.projects && cv.projects.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #1e293b; border-bottom: 1.5px solid ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}
+                  </h2>
+                  ${renderProjectsHtml('', theme)}
+                </div>
+              ` : ''}
+
+              ${renderCustomSectionsHtml(theme)}
+            </td>
+          </tr>
+        </table>
+
+        <!-- Grounded Accent Footer -->
+        <table style="width: 100%; height: 6px; background-color: ${theme}; border-collapse: collapse; margin-top: 10px;">
+          <tr><td></td></tr>
+        </table>
+      </body>
+      </html>
+    `;
+  }
+
+  // =========================================================================
+  // 4. GENEVA GRID TEMPLATE (Architectural Grid, Two-Tone Header, Boxed Modules)
+  // =========================================================================
+  if (templateId === 'geneva-grid') {
+    const nameParts = fullName.trim().split(' ');
+    const firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : fullName;
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
+          table { width: 100%; border-collapse: collapse; }
+          ul { margin: 4px 0 8px 0; padding-left: 18px; }
+          li { font-size: 10pt; margin-bottom: 3px; }
+        </style>
+      </head>
+      <body>
+        <!-- Header -->
+        <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 16px;">
+          <h1 style="margin: 0; font-size: 24pt; font-weight: 800; line-height: 1.2;">
+            <span style="color: #0f172a;">${firstName} </span>
+            <span style="color: ${theme};">${lastName}</span>
+          </h1>
+          <p style="color: #64748b; font-size: 11pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 4px 0 8px 0;">
+            ${role}
+          </p>
+          <p style="color: #475569; font-size: 9.5pt; margin: 0;">${contactList.join('   ·   ')}</p>
+        </div>
+
         ${cv.summary ? `
-          <div class="section-header">Professional Profile</div>
-          <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
+          <table style="width: 100%; border: 1px solid #e2e8f0; border-top: 3.5px solid ${theme}; background-color: #ffffff; margin-bottom: 16px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 14px 16px;">
+                <p style="color: ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">
+                  ${escapeHtml(getSectionTitle(cv, 'summary', 'Profile'))}
+                </p>
+                <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0;">${escapeHtml(cv.summary)}</p>
+              </td>
+            </tr>
+          </table>
         ` : ''}
 
-        ${cv.experiences && cv.experiences.length > 0 ? `
-          <div class="section-header">Work Experience</div>
-          ${renderExperienceHtml()}
-        ` : ''}
+        <!-- 2-Column Grid -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+          <tr>
+            <!-- Left Grid (38%) -->
+            <td style="width: 38%; padding-right: 12px; vertical-align: top;">
+              ${cv.educations && cv.educations.length > 0 ? `
+                <table style="width: 100%; border: 1px solid #e2e8f0; border-top: 3.5px solid ${theme}; margin-bottom: 14px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 12px 14px;">
+                      <p style="color: ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                        ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}
+                      </p>
+                      ${renderEducationHtml()}
+                    </td>
+                  </tr>
+                </table>
+              ` : ''}
 
-        ${cv.projects && cv.projects.length > 0 ? `
-          <div class="section-header">Key Projects</div>
-          ${renderProjectsHtml()}
-        ` : ''}
+              ${cv.skills && cv.skills.length > 0 ? `
+                <table style="width: 100%; border: 1px solid #e2e8f0; border-top: 3.5px solid ${theme}; margin-bottom: 14px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 12px 14px;">
+                      <p style="color: ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                        ${escapeHtml(getSectionTitle(cv, 'skills', 'Skills'))}
+                      </p>
+                      ${renderSkillsHtml()}
+                    </td>
+                  </tr>
+                </table>
+              ` : ''}
+            </td>
 
-        ${cv.educations && cv.educations.length > 0 ? `
-          <div class="section-header">Education</div>
-          ${renderEducationHtml()}
-        ` : ''}
+            <!-- Right Grid (62%) -->
+            <td style="width: 62%; padding-left: 12px; vertical-align: top;">
+              ${cv.experiences && cv.experiences.length > 0 ? `
+                <table style="width: 100%; border: 1px solid #e2e8f0; border-top: 3.5px solid ${theme}; margin-bottom: 14px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 14px 16px;">
+                      <p style="color: ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                        ${escapeHtml(getSectionTitle(cv, 'experience', 'Experience'))}
+                      </p>
+                      ${renderExperienceHtml('', theme)}
+                    </td>
+                  </tr>
+                </table>
+              ` : ''}
 
-        ${cv.skills && cv.skills.length > 0 ? `
-          <div class="section-header">Skills &amp; Technologies</div>
-          ${renderSkillsHtml()}
-        ` : ''}
+              ${cv.projects && cv.projects.length > 0 ? `
+                <table style="width: 100%; border: 1px solid #e2e8f0; border-top: 3.5px solid ${theme}; margin-bottom: 14px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 14px 16px;">
+                      <p style="color: ${theme}; font-size: 11pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                        ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}
+                      </p>
+                      ${renderProjectsHtml('', theme)}
+                    </td>
+                  </tr>
+                </table>
+              ` : ''}
+            </td>
+          </tr>
+        </table>
 
-        ${cv.certifications && cv.certifications.length > 0 ? `
-          <div class="section-header">Certifications</div>
-          ${renderCertificationsHtml()}
-        ` : ''}
-
-        ${cv.languages && cv.languages.length > 0 ? `
-          <div class="section-header">Languages</div>
-          ${renderLanguagesHtml()}
+        ${(cv.certifications?.length || cv.languages?.length) ? `
+          <table style="width: 100%; border: 1px solid #e2e8f0; border-top: 3.5px solid ${theme}; margin-bottom: 14px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 12px 16px;">
+                ${renderCertificationsHtml()}
+                ${renderLanguagesHtml()}
+              </td>
+            </tr>
+          </table>
         ` : ''}
 
         ${renderCustomSectionsHtml(theme)}
@@ -631,10 +950,216 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 3. EDINBURGH TIMELINE TEMPLATE
-  // Continuous left accent rail borders on work experience and education
+  // 5. BOTANICAL TERRACOTTA TEMPLATE (Cream / Terracotta Palette, Soft Panel)
   // =========================================================================
-  if (templateId === 'timeline') {
+  if (templateId === 'botanical-terracotta') {
+    const terracotta = cv.themeColor || '#a35638';
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'EB Garamond', Georgia, serif; font-size: 10.5pt; color: #292524; margin: 0; padding: 0; background-color: #fcfaf6; }
+          table { width: 100%; border-collapse: collapse; }
+          ul { margin: 4px 0 8px 0; padding-left: 18px; }
+          li { font-size: 10pt; margin-bottom: 3px; }
+        </style>
+      </head>
+      <body>
+        <table style="width: 100%; border-collapse: collapse; background-color: #fcfaf6;">
+          <tr>
+            <!-- Left Soft Sage / Earthy Panel -->
+            <td style="width: 32%; background-color: #f3eee7; padding: 22px 16px; vertical-align: top; border-radius: 6px;">
+              <p style="color: ${terracotta}; font-size: 11pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">
+                CONTACT
+              </p>
+              ${p.email ? `<p style="font-size: 9pt; color: #44403c; margin: 0 0 4px 0;">${escapeHtml(p.email)}</p>` : ''}
+              ${p.phone ? `<p style="font-size: 9pt; color: #44403c; margin: 0 0 4px 0;">${escapeHtml(p.phone)}</p>` : ''}
+              ${p.location ? `<p style="font-size: 9pt; color: #44403c; margin: 0 0 4px 0;">${escapeHtml(p.location)}</p>` : ''}
+              ${p.linkedin ? `<p style="font-size: 9pt; color: #44403c; margin: 0 0 4px 0;">${escapeHtml(p.linkedin)}</p>` : ''}
+              ${p.website ? `<p style="font-size: 9pt; color: #44403c; margin: 0 0 4px 0;">${escapeHtml(p.website)}</p>` : ''}
+
+              ${cv.skills && cv.skills.length > 0 ? `
+                <div style="margin-top: 18px;">
+                  <p style="color: ${terracotta}; font-size: 11pt; font-weight: bold; border-bottom: 1px solid #d6d3d1; padding-bottom: 3px; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'skills', 'Core Skills'))}
+                  </p>
+                  ${cv.skills.map((s) => `
+                    <div style="margin-bottom: 8px;">
+                      <p style="color: #292524; font-size: 9.5pt; font-weight: bold; margin: 0 0 2px 0;">${escapeHtml(s.category)}</p>
+                      <p style="font-size: 9pt; color: #57534e; margin: 0;">${escapeHtml(s.items.join(', '))}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              ${cv.educations && cv.educations.length > 0 ? `
+                <div style="margin-top: 18px;">
+                  <p style="color: ${terracotta}; font-size: 11pt; font-weight: bold; border-bottom: 1px solid #d6d3d1; padding-bottom: 3px; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}
+                  </p>
+                  ${renderEducationHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.languages && cv.languages.length > 0 ? `
+                <div style="margin-top: 16px;">
+                  <p style="color: ${terracotta}; font-size: 11pt; font-weight: bold; border-bottom: 1px solid #d6d3d1; padding-bottom: 3px; margin: 0 0 6px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}
+                  </p>
+                  ${renderLanguagesHtml()}
+                </div>
+              ` : ''}
+            </td>
+
+            <!-- Right Main Area -->
+            <td style="width: 68%; padding: 22px 24px; vertical-align: top;">
+              <h1 style="color: #292524; font-size: 26pt; font-weight: bold; margin: 0 0 2px 0; font-family: 'EB Garamond', Georgia, serif;">
+                ${fullName}
+              </h1>
+              <p style="color: ${terracotta}; font-size: 12pt; font-style: italic; margin: 0 0 16px 0;">
+                ${role}
+              </p>
+
+              ${cv.summary ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${terracotta}; border-bottom: 1px solid #d6d3d1; font-size: 12pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'summary', 'Professional Profile'))}
+                  </h2>
+                  <p style="font-size: 10.5pt; color: #44403c; line-height: 1.6; margin: 0;">${escapeHtml(cv.summary)}</p>
+                </div>
+              ` : ''}
+
+              ${cv.experiences && cv.experiences.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${terracotta}; border-bottom: 1px solid #d6d3d1; font-size: 12pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'experience', 'Experience'))}
+                  </h2>
+                  ${renderExperienceHtml('', terracotta)}
+                </div>
+              ` : ''}
+
+              ${cv.projects && cv.projects.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: ${terracotta}; border-bottom: 1px solid #d6d3d1; font-size: 12pt; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">
+                    ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}
+                  </h2>
+                  ${renderProjectsHtml('', terracotta)}
+                </div>
+              ` : ''}
+
+              ${renderCustomSectionsHtml(terracotta)}
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+  }
+
+  // =========================================================================
+  // 6. SILICON ACCENT TEMPLATE (Developer Layout, Vibrant Badge, Callout Bar)
+  // =========================================================================
+  if (templateId === 'silicon-accent') {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
+          table { width: 100%; border-collapse: collapse; }
+          ul { margin: 4px 0 8px 0; padding-left: 18px; }
+          li { font-size: 10pt; margin-bottom: 3px; }
+        </style>
+      </head>
+      <body>
+        <!-- Header -->
+        <div style="border-bottom: 1.5px solid #cbd5e1; padding-bottom: 14px; margin-bottom: 16px;">
+          <h1 style="color: #0f172a; font-size: 24pt; font-weight: bold; margin: 0 0 4px 0;">
+            ${fullName}
+          </h1>
+          <div style="margin: 4px 0 8px 0;">
+            <span style="background-color: ${theme}; color: #0f172a; font-weight: bold; font-size: 10pt; padding: 3px 10px; border-radius: 4px; display: inline-block;">
+              ${role}
+            </span>
+          </div>
+          <p style="color: #64748b; font-size: 9.5pt; margin: 0;">${contactList.join('   |   ')}</p>
+        </div>
+
+        ${cv.summary ? `
+          <div style="border-left: 4px solid ${theme}; background-color: #f8fafc; padding: 12px 16px; margin-bottom: 18px;">
+            <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0;">${escapeHtml(cv.summary)}</p>
+          </div>
+        ` : ''}
+
+        <!-- 2-Column Structure -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+          <tr>
+            <!-- Left (35%): Skills & Education -->
+            <td style="width: 35%; padding-right: 18px; vertical-align: top; border-right: 1px solid #e2e8f0;">
+              ${cv.skills && cv.skills.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #0f172a; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    // ${escapeHtml(getSectionTitle(cv, 'skills', 'Technical Skills'))}
+                  </h2>
+                  ${renderSkillsHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.educations && cv.educations.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #0f172a; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    // ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}
+                  </h2>
+                  ${renderEducationHtml()}
+                </div>
+              ` : ''}
+
+              ${cv.certifications && cv.certifications.length > 0 ? `
+                <div style="margin-bottom: 16px;">
+                  <h2 style="color: #0f172a; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    // ${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}
+                  </h2>
+                  ${renderCertificationsHtml()}
+                </div>
+              ` : ''}
+            </td>
+
+            <!-- Right (65%): Experience & Projects -->
+            <td style="width: 65%; padding-left: 20px; vertical-align: top;">
+              ${cv.experiences && cv.experiences.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #0f172a; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    // ${escapeHtml(getSectionTitle(cv, 'experience', 'Experience'))}
+                  </h2>
+                  ${renderExperienceHtml('', theme)}
+                </div>
+              ` : ''}
+
+              ${cv.projects && cv.projects.length > 0 ? `
+                <div style="margin-bottom: 18px;">
+                  <h2 style="color: #0f172a; font-size: 11pt; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase;">
+                    // ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}
+                  </h2>
+                  ${renderProjectsHtml('', theme)}
+                </div>
+              ` : ''}
+
+              ${renderCustomSectionsHtml(theme)}
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+  }
+
+  // =========================================================================
+  // 7. EDINBURGH TIMELINE TEMPLATE (Continuous Vertical Timeline Rail)
+  // =========================================================================
+  if (templateId === 'edinburgh-timeline') {
     return `
       <!DOCTYPE html>
       <html>
@@ -660,37 +1185,37 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         </div>
 
         ${cv.summary ? `
-          <div class="section-header">Professional Profile</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'summary', 'Professional Profile'))}</div>
           <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
         ` : ''}
 
         ${cv.experiences && cv.experiences.length > 0 ? `
-          <div class="section-header">Career Timeline (Work Experience)</div>
-          ${renderExperienceHtml(`border-left: 3px solid ${theme}; padding-left: 12px; margin-left: 4px;`)}
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'experience', 'Career Timeline (Work Experience)'))}</div>
+          ${renderExperienceHtml(`border-left: 3px solid ${theme}; padding-left: 14px; margin-left: 4px;`)}
         ` : ''}
 
         ${cv.educations && cv.educations.length > 0 ? `
-          <div class="section-header">Education &amp; Credentials</div>
-          ${renderEducationHtml(`border-left: 3px solid ${theme}; padding-left: 12px; margin-left: 4px;`)}
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'education', 'Education & Credentials'))}</div>
+          ${renderEducationHtml(`border-left: 3px solid ${theme}; padding-left: 14px; margin-left: 4px;`)}
         ` : ''}
 
         ${cv.skills && cv.skills.length > 0 ? `
-          <div class="section-header">Skills &amp; Competencies</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'skills', 'Skills & Competencies'))}</div>
           ${renderSkillsHtml()}
         ` : ''}
 
         ${cv.projects && cv.projects.length > 0 ? `
-          <div class="section-header">Projects</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}</div>
           ${renderProjectsHtml()}
         ` : ''}
 
         ${cv.certifications && cv.certifications.length > 0 ? `
-          <div class="section-header">Certifications</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}</div>
           ${renderCertificationsHtml()}
         ` : ''}
 
         ${cv.languages && cv.languages.length > 0 ? `
-          <div class="section-header">Languages</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
           ${renderLanguagesHtml()}
         ` : ''}
 
@@ -701,10 +1226,9 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 4. LONDON CORPORATE TEMPLATE
-  // High-contrast dark navy banner table with gold/theme accent border
+  // 8. CAMBRIDGE ACCENT TEMPLATE (Top Colored Banner, Left Accent Border Heads)
   // =========================================================================
-  if (templateId === 'corporate') {
+  if (templateId === 'cambridge-accent') {
     return `
       <!DOCTYPE html>
       <html>
@@ -712,7 +1236,76 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         <meta charset="utf-8">
         <style>
           body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
-          .corp-table { width: 650px; background-color: #0f172a; border-bottom: 4px solid ${theme}; color: #ffffff; margin-bottom: 18px; border-collapse: collapse; }
+          .banner-table { width: 100%; background-color: ${theme}; color: #ffffff; margin-bottom: 16px; border-collapse: collapse; }
+          .section-header { border-left: 5px solid ${theme}; padding-left: 10px; color: ${theme}; font-weight: bold; font-size: 12.5pt; text-transform: uppercase; margin: 18px 0 8px 0; }
+          ul { margin: 4px 0 8px 0; padding-left: 18px; }
+          li { font-size: 10pt; margin-bottom: 3px; }
+        </style>
+      </head>
+      <body>
+        <table class="banner-table">
+          <tr>
+            <td style="padding: 22px; color: #ffffff;">
+              <h1 style="color: #ffffff; font-size: 22pt; font-weight: bold; margin: 0 0 4px 0;">${fullName}</h1>
+              <p style="color: #f1f5f9; font-size: 11pt; font-weight: bold; margin: 0 0 10px 0;">${role}</p>
+              <p style="color: #e2e8f0; font-size: 9.5pt; margin: 0;">${contactList.join('   •   ')}</p>
+            </td>
+          </tr>
+        </table>
+
+        ${cv.summary ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'summary', 'Professional Profile'))}</div>
+          <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
+        ` : ''}
+
+        ${cv.experiences && cv.experiences.length > 0 ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'experience', 'Work Experience'))}</div>
+          ${renderExperienceHtml()}
+        ` : ''}
+
+        ${cv.projects && cv.projects.length > 0 ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'projects', 'Key Projects'))}</div>
+          ${renderProjectsHtml()}
+        ` : ''}
+
+        ${cv.educations && cv.educations.length > 0 ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}</div>
+          ${renderEducationHtml()}
+        ` : ''}
+
+        ${cv.skills && cv.skills.length > 0 ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'skills', 'Skills & Technologies'))}</div>
+          ${renderSkillsHtml()}
+        ` : ''}
+
+        ${cv.certifications && cv.certifications.length > 0 ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}</div>
+          ${renderCertificationsHtml()}
+        ` : ''}
+
+        ${cv.languages && cv.languages.length > 0 ? `
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
+          ${renderLanguagesHtml()}
+        ` : ''}
+
+        ${renderCustomSectionsHtml(theme)}
+      </body>
+      </html>
+    `;
+  }
+
+  // =========================================================================
+  // 9. LONDON CORPORATE TEMPLATE (Dark Navy Header Banner, Double Accent Line)
+  // =========================================================================
+  if (templateId === 'london-corporate') {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; }
+          .corp-table { width: 100%; background-color: #0f172a; border-bottom: 4px solid ${theme}; color: #ffffff; margin-bottom: 18px; border-collapse: collapse; }
           .section-header { border-bottom: 2px solid ${theme}; color: #0f172a; font-weight: bold; font-size: 12pt; text-transform: uppercase; margin: 18px 0 10px 0; }
           ul { margin: 4px 0 8px 0; padding-left: 18px; }
           li { font-size: 10pt; margin-bottom: 3px; }
@@ -734,37 +1327,37 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         </table>
 
         ${cv.summary ? `
-          <div class="section-header">Executive Summary</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'summary', 'Executive Summary'))}</div>
           <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
         ` : ''}
 
         ${cv.experiences && cv.experiences.length > 0 ? `
-          <div class="section-header">Professional Experience</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'experience', 'Professional Experience'))}</div>
           ${renderExperienceHtml()}
         ` : ''}
 
         ${cv.educations && cv.educations.length > 0 ? `
-          <div class="section-header">Education</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}</div>
           ${renderEducationHtml()}
         ` : ''}
 
         ${cv.skills && cv.skills.length > 0 ? `
-          <div class="section-header">Core Competencies</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'skills', 'Core Competencies'))}</div>
           ${renderSkillsHtml()}
         ` : ''}
 
         ${cv.projects && cv.projects.length > 0 ? `
-          <div class="section-header">Key Engagements &amp; Projects</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'projects', 'Key Projects'))}</div>
           ${renderProjectsHtml()}
         ` : ''}
 
         ${cv.certifications && cv.certifications.length > 0 ? `
-          <div class="section-header">Certifications</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}</div>
           ${renderCertificationsHtml()}
         ` : ''}
 
         ${cv.languages && cv.languages.length > 0 ? `
-          <div class="section-header">Languages</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
           ${renderLanguagesHtml()}
         ` : ''}
 
@@ -775,12 +1368,11 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 5. TECH COMPACT TEMPLATE
-  // Monospace Consolas terminal header & "// Core Technical Stack" box
+  // 10. TECH COMPACT TEMPLATE (Monospaced Consolas, Terminal Header, Code Box)
   // =========================================================================
-  if (templateId === 'tech') {
+  if (templateId === 'tech-compact') {
     const techStackBox = cv.skills && cv.skills.length > 0 ? `
-      <table style="width: 650px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid ${theme}; margin-bottom: 14px; font-family: Consolas, monospace; border-collapse: collapse;">
+      <table style="width: 100%; background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid ${theme}; margin-bottom: 14px; font-family: Consolas, monospace; border-collapse: collapse;">
         <tr>
           <td style="padding: 10px 14px;">
             <p style="color: ${theme}; font-weight: bold; font-size: 10pt; margin: 0 0 4px 0;">// CORE TECHNICAL STACK</p>
@@ -824,27 +1416,27 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         ${techStackBox}
 
         ${cv.experiences && cv.experiences.length > 0 ? `
-          <div class="section-header">// Work Experience</div>
+          <div class="section-header">// ${escapeHtml(getSectionTitle(cv, 'experience', 'Work Experience'))}</div>
           ${renderExperienceHtml()}
         ` : ''}
 
         ${cv.projects && cv.projects.length > 0 ? `
-          <div class="section-header">// Projects</div>
+          <div class="section-header">// ${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}</div>
           ${renderProjectsHtml()}
         ` : ''}
 
         ${cv.educations && cv.educations.length > 0 ? `
-          <div class="section-header">// Education</div>
+          <div class="section-header">// ${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}</div>
           ${renderEducationHtml()}
         ` : ''}
 
         ${cv.certifications && cv.certifications.length > 0 ? `
-          <div class="section-header">// Certifications</div>
+          <div class="section-header">// ${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}</div>
           ${renderCertificationsHtml()}
         ` : ''}
 
         ${cv.languages && cv.languages.length > 0 ? `
-          <div class="section-header">// Languages</div>
+          <div class="section-header">// ${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
           ${renderLanguagesHtml()}
         ` : ''}
 
@@ -855,10 +1447,9 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 6. ACADEMIC CLASSIC TEMPLATE
-  // Serif font, centered academic header, double rule dividers
+  // 11. ACADEMIC CLASSIC TEMPLATE (Serif EB Garamond, Centered Academic Header)
   // =========================================================================
-  if (templateId === 'academic') {
+  if (templateId === 'academic-classic') {
     return `
       <!DOCTYPE html>
       <html>
@@ -882,37 +1473,37 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         </div>
 
         ${cv.summary ? `
-          <div class="section-header">Profile &amp; Research Statement</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'summary', 'Profile & Research Statement'))}</div>
           <p style="font-size: 10.5pt; color: #292524; line-height: 1.6; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
         ` : ''}
 
         ${cv.educations && cv.educations.length > 0 ? `
-          <div class="section-header">Education &amp; Qualifications</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'education', 'Education & Qualifications'))}</div>
           ${renderEducationHtml()}
         ` : ''}
 
         ${cv.experiences && cv.experiences.length > 0 ? `
-          <div class="section-header">Academic &amp; Professional Appointments</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'experience', 'Academic & Professional Appointments'))}</div>
           ${renderExperienceHtml()}
         ` : ''}
 
         ${cv.projects && cv.projects.length > 0 ? `
-          <div class="section-header">Research Projects &amp; Publications</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'projects', 'Research Projects & Publications'))}</div>
           ${renderProjectsHtml()}
         ` : ''}
 
         ${cv.skills && cv.skills.length > 0 ? `
-          <div class="section-header">Areas of Expertise</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'skills', 'Areas of Expertise'))}</div>
           ${renderSkillsHtml()}
         ` : ''}
 
         ${cv.certifications && cv.certifications.length > 0 ? `
-          <div class="section-header">Honors &amp; Awards</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'certifications', 'Honors & Awards'))}</div>
           ${renderCertificationsHtml()}
         ` : ''}
 
         ${cv.languages && cv.languages.length > 0 ? `
-          <div class="section-header">Languages</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
           ${renderLanguagesHtml()}
         ` : ''}
 
@@ -923,10 +1514,9 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 7. MINIMALIST CLEAN TEMPLATE
-  // High-whitespace, left-aligned, delicate hairline rule
+  // 12. MINIMALIST CLEAN TEMPLATE (High Whitespace, Hairline Dividers, ATS Clear)
   // =========================================================================
-  if (templateId === 'minimalist') {
+  if (templateId === 'minimalist-clean') {
     return `
       <!DOCTYPE html>
       <html>
@@ -952,37 +1542,37 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
         </div>
 
         ${cv.summary ? `
-          <div class="section-header">Profile</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'summary', 'Profile'))}</div>
           <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
         ` : ''}
 
         ${cv.experiences && cv.experiences.length > 0 ? `
-          <div class="section-header">Experience</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'experience', 'Experience'))}</div>
           ${renderExperienceHtml()}
         ` : ''}
 
         ${cv.educations && cv.educations.length > 0 ? `
-          <div class="section-header">Education</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}</div>
           ${renderEducationHtml()}
         ` : ''}
 
         ${cv.skills && cv.skills.length > 0 ? `
-          <div class="section-header">Skills</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'skills', 'Skills'))}</div>
           ${renderSkillsHtml()}
         ` : ''}
 
         ${cv.projects && cv.projects.length > 0 ? `
-          <div class="section-header">Projects</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'projects', 'Projects'))}</div>
           ${renderProjectsHtml()}
         ` : ''}
 
         ${cv.certifications && cv.certifications.length > 0 ? `
-          <div class="section-header">Certifications</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}</div>
           ${renderCertificationsHtml()}
         ` : ''}
 
         ${cv.languages && cv.languages.length > 0 ? `
-          <div class="section-header">Languages</div>
+          <div class="section-header">${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
           ${renderLanguagesHtml()}
         ` : ''}
 
@@ -993,8 +1583,7 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
   }
 
   // =========================================================================
-  // 8. MODERN EXECUTIVE (DEFAULT) TEMPLATE
-  // Header with colored role and solid bottom accent line
+  // 13. MODERN EXECUTIVE (DEFAULT) TEMPLATE (Solid Header & Section Accents)
   // =========================================================================
   return `
     <!DOCTYPE html>
@@ -1003,7 +1592,7 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
       <meta charset="utf-8">
       <style>
         body { font-family: ${font}; font-size: 10pt; color: #1e293b; margin: 0; padding: 0; line-height: 1.5; }
-        .mod-header { border-bottom: 3px solid ${theme}; padding-bottom: 14px; margin-bottom: 18px; }
+        .mod-header { border-bottom: 3.5px solid ${theme}; padding-bottom: 14px; margin-bottom: 18px; }
         .section-header { border-bottom: 1.5px solid ${theme}; color: ${theme}; font-weight: bold; font-size: 12.5pt; text-transform: uppercase; margin: 18px 0 8px 0; }
         ul { margin: 4px 0 8px 0; padding-left: 18px; }
         li { font-size: 10pt; margin-bottom: 3px; }
@@ -1017,37 +1606,37 @@ export const renderTemplateToWordHtml = (cv: CVData): string => {
       </div>
 
       ${cv.summary ? `
-        <div class="section-header">Professional Summary</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'summary', 'Professional Summary'))}</div>
         <p style="font-size: 10pt; color: #334155; line-height: 1.5; margin: 0 0 16px 0;">${escapeHtml(cv.summary)}</p>
       ` : ''}
 
       ${cv.experiences && cv.experiences.length > 0 ? `
-        <div class="section-header">Work Experience</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'experience', 'Work Experience'))}</div>
         ${renderExperienceHtml()}
       ` : ''}
 
       ${cv.educations && cv.educations.length > 0 ? `
-        <div class="section-header">Education</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'education', 'Education'))}</div>
         ${renderEducationHtml()}
       ` : ''}
 
       ${cv.skills && cv.skills.length > 0 ? `
-        <div class="section-header">Skills &amp; Expertise</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'skills', 'Skills & Expertise'))}</div>
         ${renderSkillsHtml()}
       ` : ''}
 
       ${cv.projects && cv.projects.length > 0 ? `
-        <div class="section-header">Key Projects</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'projects', 'Key Projects'))}</div>
         ${renderProjectsHtml()}
       ` : ''}
 
       ${cv.certifications && cv.certifications.length > 0 ? `
-        <div class="section-header">Certifications</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'certifications', 'Certifications'))}</div>
         ${renderCertificationsHtml()}
       ` : ''}
 
       ${cv.languages && cv.languages.length > 0 ? `
-        <div class="section-header">Languages</div>
+        <div class="section-header">${escapeHtml(getSectionTitle(cv, 'languages', 'Languages'))}</div>
         ${renderLanguagesHtml()}
       ` : ''}
 
@@ -1101,29 +1690,647 @@ export const getDocxFont = (fontFamily?: string): string => {
 };
 
 /**
+ * Creates empty borders for borderless docx tables
+ */
+const createDocxBorderNone = () => ({
+  top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+  bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+  left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+  right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+  insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+  insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+});
+
+/**
  * Creates a section heading with authentic Word colored underline border
  */
-const createSectionHeader = (title: string, themeHex: string, font: string): Paragraph => {
+const createSectionHeader = (
+  title: string,
+  themeHex: string,
+  font: string,
+  options?: { isWhite?: boolean; isCentered?: boolean; noBorder?: boolean; size?: number }
+): Paragraph => {
+  const isWhite = options?.isWhite ?? false;
+  const isCentered = options?.isCentered ?? false;
+  const noBorder = options?.noBorder ?? false;
+  const size = options?.size ?? 22;
+
   return new Paragraph({
+    alignment: isCentered ? AlignmentType.CENTER : AlignmentType.LEFT,
     children: [
       new TextRun({
         text: title.toUpperCase(),
         bold: true,
-        size: 22, // 11pt
-        color: themeHex,
+        size, // 22 = 11pt
+        color: isWhite ? 'FFFFFF' : themeHex,
         font,
       }),
     ],
-    spacing: { before: 240, after: 100 },
-    border: {
-      bottom: {
-        style: BorderStyle.SINGLE,
-        size: 12, // 1.5pt crisp solid line under heading
-        color: themeHex,
-        space: 4,
-      },
-    },
+    spacing: { before: 200, after: 80 },
+    ...(!noBorder && !isWhite
+      ? {
+          border: {
+            bottom: {
+              style: BorderStyle.SINGLE,
+              size: 12,
+              color: themeHex,
+              space: 4,
+            },
+          },
+        }
+      : {}),
   });
+};
+
+/**
+ * Helper generators for DOCX components
+ */
+const getDocxSummaryParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false,
+  isCentered = false
+): Paragraph[] => {
+  if (!cv.summary || !cv.summary.trim()) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'summary', 'Professional Summary'),
+      themeHex,
+      font,
+      { isWhite, isCentered }
+    )
+  );
+  paras.push(
+    new Paragraph({
+      alignment: isCentered ? AlignmentType.CENTER : AlignmentType.LEFT,
+      children: [
+        new TextRun({
+          text: cv.summary.trim(),
+          size: 20, // 10pt
+          color: isWhite ? 'F8FAFC' : '334155',
+          font,
+        }),
+      ],
+      spacing: { after: 140, line: 276 },
+    })
+  );
+  return paras;
+};
+
+const getDocxExperienceParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.experiences || cv.experiences.length === 0) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'experience', 'Work Experience'),
+      themeHex,
+      font,
+      { isWhite }
+    )
+  );
+
+  cv.experiences.forEach((exp) => {
+    const roleRuns: TextRun[] = [
+      new TextRun({
+        text: exp.jobTitle || 'Role',
+        bold: true,
+        size: 21, // 10.5pt
+        color: isWhite ? 'FFFFFF' : '0F172A',
+        font,
+      }),
+    ];
+
+    if (exp.employer) {
+      roleRuns.push(
+        new TextRun({
+          text: ' — ',
+          bold: true,
+          size: 21,
+          color: isWhite ? 'CBD5E1' : '64748B',
+          font,
+        }),
+        new TextRun({
+          text: exp.employer,
+          bold: true,
+          size: 21,
+          color: isWhite ? 'FFFFFF' : themeHex,
+          font,
+        })
+      );
+    }
+
+    paras.push(
+      new Paragraph({
+        children: roleRuns,
+        spacing: { before: 110, after: 30 },
+      })
+    );
+
+    const dates = `${exp.startDate || ''} — ${exp.isCurrent ? 'Present' : exp.endDate || ''}${
+      exp.location ? ` | ${exp.location}` : ''
+    }`;
+    if (dates.trim()) {
+      paras.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: dates,
+              size: 18, // 9pt
+              color: isWhite ? 'E2E8F0' : '64748B',
+              font,
+            }),
+          ],
+          spacing: { after: 50 },
+        })
+      );
+    }
+
+    (exp.highlights || [])
+      .filter((h) => h && h.trim())
+      .forEach((hl) => {
+        paras.push(
+          new Paragraph({
+            bullet: { level: 0 },
+            children: [
+              new TextRun({
+                text: hl.trim(),
+                size: 19, // 9.5pt
+                color: isWhite ? 'F8FAFC' : '334155',
+                font,
+              }),
+            ],
+            spacing: { after: 35 },
+          })
+        );
+      });
+  });
+
+  return paras;
+};
+
+const getDocxProjectsParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.projects || cv.projects.length === 0) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'projects', 'Projects'),
+      themeHex,
+      font,
+      { isWhite }
+    )
+  );
+
+  cv.projects.forEach((proj) => {
+    const projRuns: TextRun[] = [
+      new TextRun({
+        text: proj.title || 'Project',
+        bold: true,
+        size: 21,
+        color: isWhite ? 'FFFFFF' : '0F172A',
+        font,
+      }),
+    ];
+
+    if (proj.subtitle) {
+      projRuns.push(
+        new TextRun({
+          text: ' — ',
+          bold: true,
+          size: 21,
+          color: isWhite ? 'CBD5E1' : '64748B',
+          font,
+        }),
+        new TextRun({
+          text: proj.subtitle,
+          bold: false,
+          size: 20,
+          color: isWhite ? 'FFFFFF' : themeHex,
+          font,
+        })
+      );
+    }
+
+    if (proj.link) {
+      projRuns.push(
+        new TextRun({
+          text: ` (${proj.link})`,
+          size: 18,
+          color: isWhite ? 'E2E8F0' : '64748B',
+          font,
+        })
+      );
+    }
+
+    paras.push(
+      new Paragraph({
+        children: projRuns,
+        spacing: { before: 110, after: 30 },
+      })
+    );
+
+    if (proj.description) {
+      proj.description.split('\n').forEach((line) => {
+        if (line.trim()) {
+          paras.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: line,
+                  size: 19,
+                  color: isWhite ? 'F8FAFC' : '334155',
+                  font,
+                }),
+              ],
+              spacing: { after: 35 },
+            })
+          );
+        }
+      });
+    }
+
+    (proj.highlights || [])
+      .filter((h) => h && h.trim())
+      .forEach((hl) => {
+        paras.push(
+          new Paragraph({
+            bullet: { level: 0 },
+            children: [
+              new TextRun({
+                text: hl.trim(),
+                size: 19,
+                color: isWhite ? 'F8FAFC' : '334155',
+                font,
+              }),
+            ],
+            spacing: { after: 35 },
+          })
+        );
+      });
+  });
+
+  return paras;
+};
+
+const getDocxEducationParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.educations || cv.educations.length === 0) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'education', 'Education'),
+      themeHex,
+      font,
+      { isWhite }
+    )
+  );
+
+  cv.educations.forEach((edu) => {
+    const degreeText = [edu.degree, edu.fieldOfStudy].filter(Boolean).join(' in ');
+    const eduRuns: TextRun[] = [
+      new TextRun({
+        text: degreeText || edu.degree || 'Degree',
+        bold: true,
+        size: 21,
+        color: isWhite ? 'FFFFFF' : '0F172A',
+        font,
+      }),
+    ];
+
+    if (edu.school) {
+      eduRuns.push(
+        new TextRun({
+          text: ' — ',
+          bold: true,
+          size: 21,
+          color: isWhite ? 'CBD5E1' : '64748B',
+          font,
+        }),
+        new TextRun({
+          text: edu.school,
+          bold: false,
+          size: 20,
+          color: isWhite ? 'FFFFFF' : '475569',
+          font,
+        })
+      );
+    }
+
+    paras.push(
+      new Paragraph({
+        children: eduRuns,
+        spacing: { before: 110, after: 30 },
+      })
+    );
+
+    const dates = `${edu.startDate || ''} — ${edu.isCurrent ? 'Present' : edu.endDate || ''}${
+      edu.location ? ` | ${edu.location}` : ''
+    }`;
+    if (dates.trim()) {
+      paras.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: dates,
+              size: 18,
+              color: isWhite ? 'E2E8F0' : '64748B',
+              font,
+            }),
+          ],
+          spacing: { after: 30 },
+        })
+      );
+    }
+
+    if (edu.grade) {
+      paras.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `Grade / Classification: ${edu.grade}`,
+              size: 18,
+              color: isWhite ? 'CBD5E1' : '64748B',
+              font,
+            }),
+          ],
+          spacing: { after: 30 },
+        })
+      );
+    }
+  });
+
+  return paras;
+};
+
+const getDocxSkillsParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.skills || cv.skills.length === 0) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'skills', 'Key Skills'),
+      themeHex,
+      font,
+      { isWhite }
+    )
+  );
+
+  cv.skills.forEach((skill) => {
+    paras.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${skill.category}: `,
+            bold: true,
+            size: 20,
+            color: isWhite ? 'FFFFFF' : '0F172A',
+            font,
+          }),
+          new TextRun({
+            text: skill.items.join(', '),
+            size: 19,
+            color: isWhite ? 'F1F5F9' : '334155',
+            font,
+          }),
+        ],
+        spacing: { after: 45 },
+      })
+    );
+  });
+
+  return paras;
+};
+
+const getDocxCertificationsParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.certifications || cv.certifications.length === 0) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'certifications', 'Certifications'),
+      themeHex,
+      font,
+      { isWhite }
+    )
+  );
+
+  cv.certifications.forEach((cert) => {
+    const certRuns: TextRun[] = [
+      new TextRun({
+        text: cert.name,
+        bold: true,
+        size: 20,
+        color: isWhite ? 'FFFFFF' : '0F172A',
+        font,
+      }),
+    ];
+    if (cert.issuer) {
+      certRuns.push(
+        new TextRun({
+          text: ` — ${cert.issuer}`,
+          size: 19,
+          color: isWhite ? 'E2E8F0' : '475569',
+          font,
+        })
+      );
+    }
+    if (cert.issueDate) {
+      certRuns.push(
+        new TextRun({
+          text: ` (${cert.issueDate})`,
+          size: 18,
+          color: isWhite ? 'CBD5E1' : '64748B',
+          font,
+        })
+      );
+    }
+    paras.push(
+      new Paragraph({
+        children: certRuns,
+        spacing: { after: 35 },
+      })
+    );
+  });
+
+  return paras;
+};
+
+const getDocxLanguagesParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.languages || cv.languages.length === 0) return [];
+  const paras: Paragraph[] = [];
+  paras.push(
+    createSectionHeader(
+      getSectionTitle(cv, 'languages', 'Languages'),
+      themeHex,
+      font,
+      { isWhite }
+    )
+  );
+
+  cv.languages.forEach((lang) => {
+    paras.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: lang.language,
+            bold: true,
+            size: 19,
+            color: isWhite ? 'FFFFFF' : '0F172A',
+            font,
+          }),
+          new TextRun({
+            text: ` (${lang.proficiency})`,
+            size: 18,
+            color: isWhite ? 'E2E8F0' : '475569',
+            font,
+          }),
+        ],
+        spacing: { after: 30 },
+      })
+    );
+  });
+
+  return paras;
+};
+
+const getDocxCustomSectionsParagraphs = (
+  cv: CVData,
+  font: string,
+  themeHex: string,
+  isWhite = false
+): Paragraph[] => {
+  if (!cv.customSections || cv.customSections.length === 0) return [];
+  const paras: Paragraph[] = [];
+
+  cv.customSections.forEach((sec) => {
+    paras.push(
+      createSectionHeader(
+        sec.sectionTitle || 'Additional Information',
+        themeHex,
+        font,
+        { isWhite }
+      )
+    );
+    (sec.items || []).forEach((item) => {
+      const itemRuns: TextRun[] = [
+        new TextRun({
+          text: item.title,
+          bold: true,
+          size: 20,
+          color: isWhite ? 'FFFFFF' : '0F172A',
+          font,
+        }),
+      ];
+      if (item.subtitle) {
+        itemRuns.push(
+          new TextRun({
+            text: ` — ${item.subtitle}`,
+            size: 19,
+            color: isWhite ? 'E2E8F0' : themeHex,
+            font,
+          })
+        );
+      }
+      if (item.date) {
+        itemRuns.push(
+          new TextRun({
+            text: ` (${item.date})`,
+            size: 18,
+            color: isWhite ? 'CBD5E1' : '64748B',
+            font,
+          })
+        );
+      }
+      paras.push(
+        new Paragraph({
+          children: itemRuns,
+          spacing: { before: 80, after: 20 },
+        })
+      );
+      if (item.description) {
+        paras.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: item.description,
+                size: 19,
+                color: isWhite ? 'F8FAFC' : '334155',
+                font,
+              }),
+            ],
+            spacing: { after: 35 },
+          })
+        );
+      }
+    });
+  });
+
+  return paras;
+};
+
+const getDocxContactRuns = (
+  p: CVData['personalDetails'],
+  font: string,
+  isWhite = false
+): TextRun[] => {
+  const parts: string[] = [];
+  if (p.email) parts.push(p.email);
+  if (p.phone) parts.push(p.phone);
+  if (p.location) parts.push(p.location);
+  if (p.linkedin) parts.push(p.linkedin.replace(/^https?:\/\/(www\.)?/, ''));
+  if (p.website) parts.push(p.website.replace(/^https?:\/\/(www\.)?/, ''));
+  if (p.github) parts.push(p.github.replace(/^https?:\/\/(www\.)?/, ''));
+
+  const runs: TextRun[] = [];
+  parts.forEach((part, index) => {
+    runs.push(
+      new TextRun({
+        text: part,
+        size: 18, // 9pt
+        color: isWhite ? 'F1F5F9' : '475569',
+        font,
+      })
+    );
+    if (index < parts.length - 1) {
+      runs.push(
+        new TextRun({
+          text: '  |  ',
+          size: 18,
+          color: isWhite ? 'CBD5E1' : '94A3B8',
+          font,
+        })
+      );
+    }
+  });
+  return runs;
 };
 
 /**
@@ -1131,11 +2338,608 @@ const createSectionHeader = (title: string, themeHex: string, font: string): Par
  * matching the executive resume layout with colored headers, underlines, company accents, and crisp typography
  */
 export const buildDocxDocument = (cv: CVData): Document => {
+  const templateId = normalizeTemplateId(cv.templateId);
   const themeHex = getCleanHex(cv.themeColor, '0D9488');
   const font = getDocxFont(cv.fontFamily);
   const p = cv.personalDetails;
   const fullName = p.fullName || cv.title || 'Candidate Name';
 
+  // 1. Creative Split Template (2-Column Table, Left Sidebar in Theme Color)
+  if (templateId === 'creative-split') {
+    const leftCellChildren: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 40,
+            color: 'FFFFFF',
+            font,
+          }),
+        ],
+        spacing: { after: 40 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 21,
+              color: 'E0E7FF',
+              font,
+            }),
+          ],
+          spacing: { after: 120 },
+        })
+      );
+    }
+
+    leftCellChildren.push(
+      createSectionHeader('Contact', 'FFFFFF', font, { isWhite: true, noBorder: true, size: 20 })
+    );
+    if (p.email) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: `Email: ${p.email}`, size: 18, color: 'F8FAFC', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+    if (p.phone) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: `Phone: ${p.phone}`, size: 18, color: 'F8FAFC', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+    if (p.location) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: `Location: ${p.location}`, size: 18, color: 'F8FAFC', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+    if (p.linkedin) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: `LinkedIn: ${p.linkedin.replace(/^https?:\/\/(www\.)?/, '')}`, size: 18, color: 'F8FAFC', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+
+    leftCellChildren.push(...getDocxSkillsParagraphs(cv, font, themeHex, true));
+    leftCellChildren.push(...getDocxLanguagesParagraphs(cv, font, themeHex, true));
+    leftCellChildren.push(...getDocxCertificationsParagraphs(cv, font, themeHex, true));
+
+    const rightCellChildren: Paragraph[] = [
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex),
+    ];
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: createDocxBorderNone(),
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 32, type: WidthType.PERCENTAGE },
+                      shading: { fill: themeHex, type: ShadingType.CLEAR },
+                      margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                      children: leftCellChildren,
+                    }),
+                    new TableCell({
+                      width: { size: 68, type: WidthType.PERCENTAGE },
+                      margins: { top: 200, bottom: 200, left: 240, right: 180 },
+                      children: rightCellChildren,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    });
+  }
+
+  // 2. Nordic Contrast Template (Deep Midnight Slate Sidebar)
+  if (templateId === 'nordic-contrast') {
+    const leftCellChildren: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 38,
+            color: 'FFFFFF',
+            font,
+          }),
+        ],
+        spacing: { after: 40 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 20,
+              color: 'CBD5E1',
+              font,
+            }),
+          ],
+          spacing: { after: 120 },
+        })
+      );
+    }
+
+    leftCellChildren.push(
+      createSectionHeader('Contact', 'FFFFFF', font, { isWhite: true, noBorder: true, size: 20 })
+    );
+    if (p.email) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: p.email, size: 18, color: 'E2E8F0', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+    if (p.phone) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: p.phone, size: 18, color: 'E2E8F0', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+    if (p.location) {
+      leftCellChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: p.location, size: 18, color: 'E2E8F0', font })],
+          spacing: { after: 25 },
+        })
+      );
+    }
+
+    leftCellChildren.push(...getDocxSkillsParagraphs(cv, font, '2D3748', true));
+    leftCellChildren.push(...getDocxLanguagesParagraphs(cv, font, '2D3748', true));
+    leftCellChildren.push(...getDocxEducationParagraphs(cv, font, '2D3748', true));
+
+    const rightCellChildren: Paragraph[] = [
+      ...getDocxSummaryParagraphs(cv, font, '2D3748'),
+      ...getDocxExperienceParagraphs(cv, font, '2D3748'),
+      ...getDocxProjectsParagraphs(cv, font, '2D3748'),
+      ...getDocxCertificationsParagraphs(cv, font, '2D3748'),
+      ...getDocxCustomSectionsParagraphs(cv, font, '2D3748'),
+    ];
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: createDocxBorderNone(),
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 32, type: WidthType.PERCENTAGE },
+                      shading: { fill: '2D3748', type: ShadingType.CLEAR },
+                      margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                      children: leftCellChildren,
+                    }),
+                    new TableCell({
+                      width: { size: 68, type: WidthType.PERCENTAGE },
+                      margins: { top: 200, bottom: 200, left: 240, right: 180 },
+                      children: rightCellChildren,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    });
+  }
+
+  // 3. Sandstone Executive Template (Warm Sand Header, 2-Column Body)
+  if (templateId === 'sandstone-executive') {
+    const headerParas: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName.toUpperCase(),
+            bold: true,
+            size: 42,
+            color: '1E293B',
+            font,
+          }),
+        ],
+        spacing: { after: 30 },
+      }),
+    ];
+    if (p.jobTitle) {
+      headerParas.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 22,
+              color: themeHex,
+              font,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+    }
+    const contactRuns = getDocxContactRuns(p, font);
+    if (contactRuns.length > 0) {
+      headerParas.push(new Paragraph({ children: contactRuns, spacing: { after: 80 } }));
+    }
+
+    const headerTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 24, color: themeHex },
+        bottom: { style: BorderStyle.SINGLE, size: 12, color: themeHex },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              shading: { fill: 'F7F4EE', type: ShadingType.CLEAR },
+              margins: { top: 160, bottom: 160, left: 180, right: 180 },
+              children: headerParas,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const leftCol: Paragraph[] = [
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxSkillsParagraphs(cv, font, themeHex),
+      ...getDocxCertificationsParagraphs(cv, font, themeHex),
+      ...getDocxLanguagesParagraphs(cv, font, themeHex),
+    ];
+    const rightCol: Paragraph[] = [
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex),
+    ];
+
+    const bodyTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: createDocxBorderNone(),
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 35, type: WidthType.PERCENTAGE },
+              margins: { top: 120, bottom: 120, left: 60, right: 180 },
+              children: leftCol,
+            }),
+            new TableCell({
+              width: { size: 65, type: WidthType.PERCENTAGE },
+              margins: { top: 120, bottom: 120, left: 180, right: 60 },
+              children: rightCol,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [headerTable, new Paragraph({ spacing: { after: 120 } }), bodyTable],
+        },
+      ],
+    });
+  }
+
+  // 4. London Corporate Template (Formal Centered Header)
+  if (templateId === 'london-corporate') {
+    const corpChildren: Paragraph[] = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 44,
+            color: '0F172A',
+            font,
+          }),
+        ],
+        spacing: { after: 40 },
+      }),
+    ];
+    if (p.jobTitle) {
+      corpChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 22,
+              color: themeHex,
+              font,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+    }
+    const contactRuns = getDocxContactRuns(p, font);
+    if (contactRuns.length > 0) {
+      corpChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: contactRuns,
+          spacing: { after: 120 },
+          border: {
+            bottom: { style: BorderStyle.SINGLE, size: 14, color: themeHex, space: 6 },
+          },
+        })
+      );
+    }
+
+    corpChildren.push(
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxSkillsParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxCertificationsParagraphs(cv, font, themeHex),
+      ...getDocxLanguagesParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex)
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 800, bottom: 800, left: 900, right: 900 } } },
+          children: corpChildren,
+        },
+      ],
+    });
+  }
+
+  // 5. Academic Classic Template (Prestigious Serif, Formal Centered Titles)
+  if (templateId === 'academic-classic') {
+    const acadFont = 'Georgia';
+    const acadChildren: Paragraph[] = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: fullName.toUpperCase(),
+            bold: true,
+            size: 42,
+            color: '1C1917',
+            font: acadFont,
+          }),
+        ],
+        spacing: { after: 30 },
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: 'CURRICULUM VITAE',
+            italics: true,
+            size: 22,
+            color: '44403C',
+            font: acadFont,
+          }),
+        ],
+        spacing: { after: 50 },
+      }),
+    ];
+
+    const contactRuns = getDocxContactRuns(p, acadFont);
+    if (contactRuns.length > 0) {
+      acadChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: contactRuns,
+          spacing: { after: 140 },
+          border: {
+            bottom: { style: BorderStyle.SINGLE, size: 8, color: '78716C', space: 6 },
+          },
+        })
+      );
+    }
+
+    acadChildren.push(
+      ...getDocxSummaryParagraphs(cv, acadFont, '44403C', false, true),
+      ...getDocxEducationParagraphs(cv, acadFont, '44403C'),
+      ...getDocxExperienceParagraphs(cv, acadFont, '44403C'),
+      ...getDocxProjectsParagraphs(cv, acadFont, '44403C'),
+      ...getDocxSkillsParagraphs(cv, acadFont, '44403C'),
+      ...getDocxCertificationsParagraphs(cv, acadFont, '44403C'),
+      ...getDocxLanguagesParagraphs(cv, acadFont, '44403C'),
+      ...getDocxCustomSectionsParagraphs(cv, acadFont, '44403C')
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 } } },
+          children: acadChildren,
+        },
+      ],
+    });
+  }
+
+  // 6. Tech Compact Template (Monospace Developer Style)
+  if (templateId === 'tech-compact') {
+    const techFont = 'Consolas';
+    const techChildren: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `// ${fullName}`,
+            bold: true,
+            size: 38,
+            color: '0F172A',
+            font: techFont,
+          }),
+        ],
+        spacing: { after: 20 },
+      }),
+    ];
+    if (p.jobTitle) {
+      techChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `role: ${p.jobTitle}`,
+              size: 20,
+              color: themeHex,
+              font: techFont,
+            }),
+          ],
+          spacing: { after: 40 },
+        })
+      );
+    }
+    const contactRuns = getDocxContactRuns(p, techFont);
+    if (contactRuns.length > 0) {
+      techChildren.push(
+        new Paragraph({
+          children: contactRuns,
+          spacing: { after: 120 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: 'CBD5E1', space: 4 } },
+        })
+      );
+    }
+
+    techChildren.push(
+      ...getDocxSummaryParagraphs(cv, techFont, themeHex),
+      ...getDocxSkillsParagraphs(cv, techFont, themeHex),
+      ...getDocxExperienceParagraphs(cv, techFont, themeHex),
+      ...getDocxProjectsParagraphs(cv, techFont, themeHex),
+      ...getDocxEducationParagraphs(cv, techFont, themeHex),
+      ...getDocxCertificationsParagraphs(cv, techFont, themeHex),
+      ...getDocxLanguagesParagraphs(cv, techFont, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, techFont, themeHex)
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 650, bottom: 650, left: 720, right: 720 } } },
+          children: techChildren,
+        },
+      ],
+    });
+  }
+
+  // 7. Botanical Terracotta Template (Warm Cream & Earthy Palette)
+  if (templateId === 'botanical-terracotta') {
+    const terraFont = 'Georgia';
+    const terraHex = getCleanHex(cv.themeColor, 'A35638');
+    const leftCell: Paragraph[] = [
+      createSectionHeader('Contact', terraHex, terraFont, { noBorder: true, size: 20 }),
+    ];
+    if (p.email) leftCell.push(new Paragraph({ children: [new TextRun({ text: p.email, size: 18, color: '44403C', font: terraFont })], spacing: { after: 20 } }));
+    if (p.phone) leftCell.push(new Paragraph({ children: [new TextRun({ text: p.phone, size: 18, color: '44403C', font: terraFont })], spacing: { after: 20 } }));
+    if (p.location) leftCell.push(new Paragraph({ children: [new TextRun({ text: p.location, size: 18, color: '44403C', font: terraFont })], spacing: { after: 20 } }));
+    leftCell.push(...getDocxSkillsParagraphs(cv, terraFont, terraHex));
+    leftCell.push(...getDocxLanguagesParagraphs(cv, terraFont, terraHex));
+    leftCell.push(...getDocxEducationParagraphs(cv, terraFont, terraHex));
+
+    const rightCell: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({ text: fullName, bold: true, size: 40, color: '292524', font: terraFont }),
+        ],
+        spacing: { after: 30 },
+      }),
+    ];
+    if (p.jobTitle) {
+      rightCell.push(
+        new Paragraph({
+          children: [new TextRun({ text: p.jobTitle.toUpperCase(), bold: true, size: 20, color: terraHex, font: terraFont })],
+          spacing: { after: 100 },
+        })
+      );
+    }
+    rightCell.push(
+      ...getDocxSummaryParagraphs(cv, terraFont, terraHex),
+      ...getDocxExperienceParagraphs(cv, terraFont, terraHex),
+      ...getDocxProjectsParagraphs(cv, terraFont, terraHex),
+      ...getDocxCertificationsParagraphs(cv, terraFont, terraHex),
+      ...getDocxCustomSectionsParagraphs(cv, terraFont, terraHex)
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: createDocxBorderNone(),
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 32, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'F3EEE7', type: ShadingType.CLEAR },
+                      margins: { top: 180, bottom: 180, left: 180, right: 180 },
+                      children: leftCell,
+                    }),
+                    new TableCell({
+                      width: { size: 68, type: WidthType.PERCENTAGE },
+                      margins: { top: 180, bottom: 180, left: 240, right: 160 },
+                      children: rightCell,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    });
+  }
+
+  // 8. Default Executive Layout (Modern Executive, Geneva Grid, Silicon Accent, etc.)
   const children: Paragraph[] = [];
 
   // 1. Candidate Full Name Header
@@ -1724,24 +3528,107 @@ export const buildDocxDocument = (cv: CVData): Document => {
 };
 
 /**
+ * Ensures global polyfills for browser DOCX export
+ */
+const ensureBrowserDocxEnvironment = () => {
+  if (typeof window !== 'undefined') {
+    (window as any).global = window;
+    try {
+      if (!Object.prototype.hasOwnProperty.call(window, 'Blob') && typeof window.Blob !== 'undefined') {
+        Object.defineProperty(window, 'Blob', {
+          value: window.Blob,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      }
+    } catch {}
+  }
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as any).global = globalThis;
+    try {
+      if (!Object.prototype.hasOwnProperty.call(globalThis, 'Blob') && typeof globalThis.Blob !== 'undefined') {
+        Object.defineProperty(globalThis, 'Blob', {
+          value: globalThis.Blob,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      }
+    } catch {}
+  }
+};
+
+/**
  * Word (.docx) Generator
  * Generates an authentic Microsoft Word document preserving full layout,
  * custom theme accent colors, colored section header underlines, company accents, and bulleted lists
  */
 export const exportToDocx = async (cv: CVData): Promise<void> => {
+  ensureBrowserDocxEnvironment();
   const fullName = cv.personalDetails.fullName || cv.title || 'CV';
   const safeName = fullName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  const templateTag = (cv.templateId || 'modern').toLowerCase();
+  const templateTag = normalizeTemplateId(cv.templateId);
   const filename = `${safeName}_${templateTag}_resume.docx`;
 
   try {
-    const doc = buildDocxDocument(cv);
-    const blob = await Packer.toBlob(doc);
+    // 1. Generate rich template-faithful HTML with full layout, sidebars, tables, and colors
+    const htmlContent = renderTemplateToWordHtml(cv);
+
+    // 2. Convert to real OpenXML .docx binary using HTMLtoDOCX
+    const docxResult = await HTMLtoDOCX(htmlContent, null, {
+      table: { row: { cantSplit: true } },
+      footer: false,
+      pageNumber: false,
+      margins: {
+        top: 720,
+        right: 720,
+        bottom: 720,
+        left: 720,
+      },
+    });
+
+    let blob: Blob;
+    if (docxResult instanceof Blob) {
+      blob = docxResult;
+    } else if (docxResult && typeof (docxResult as any).buffer !== 'undefined') {
+      const u8 = new Uint8Array(
+        (docxResult as any).buffer,
+        (docxResult as any).byteOffset || 0,
+        (docxResult as any).byteLength || (docxResult as any).length
+      );
+      blob = new Blob([u8], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+    } else {
+      blob = new Blob([docxResult as unknown as BlobPart], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+    }
+
     downloadBlob(blob, filename);
   } catch (err) {
-    console.warn('Direct docx generation encountered an issue, falling back to Word template document:', err);
-    exportWordHtmlDocument(cv, filename);
+    console.warn('HTMLtoDOCX direct generation encountered an issue, trying docx builder:', err);
+    try {
+      const doc = buildDocxDocument(cv);
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(blob, filename);
+    } catch (docxErr) {
+      console.warn('Docx Packer encountered an issue, falling back to Word template document:', docxErr);
+      exportWordHtmlDocument(cv, filename);
+    }
   }
+};
+
+/**
+ * Extracts inner body and style content from rendered template HTML
+ */
+const extractBodyAndStyles = (html: string) => {
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const styles = styleMatch ? styleMatch[1] : '';
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const bodyContent = bodyMatch ? bodyMatch[1] : html;
+  return { styles, bodyContent };
 };
 
 /**
@@ -1752,6 +3639,7 @@ export const exportToDocx = async (cv: CVData): Promise<void> => {
 export const exportWordHtmlDocument = (cv: CVData, filename: string): void => {
   const htmlContent = renderTemplateToWordHtml(cv);
   const fullName = cv.personalDetails.fullName || cv.title || 'CV';
+  const { styles, bodyContent } = extractBodyAndStyles(htmlContent);
 
   // Microsoft Word Office HTML format: natively opens in Word, LibreOffice, Apple Pages, Google Docs
   const wordDocumentHtml = `<!DOCTYPE html>
@@ -1771,16 +3659,15 @@ export const exportWordHtmlDocument = (cv: CVData, filename: string): void => {
   <style>
     @page Section1 {
       size: 21.0cm 29.7cm;
-      margin: 1.5cm 1.5cm 1.5cm 1.5cm;
-      mso-header-margin: 1.0cm;
-      mso-footer-margin: 1.0cm;
+      margin: 1.2cm 1.2cm 1.2cm 1.2cm;
+      mso-header-margin: 0.8cm;
+      mso-footer-margin: 0.8cm;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
     }
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
     }
@@ -1792,17 +3679,18 @@ export const exportWordHtmlDocument = (cv: CVData, filename: string): void => {
     td {
       vertical-align: top;
     }
+    ${styles}
   </style>
 </head>
 <body>
   <div class="Section1">
-    ${htmlContent}
+    ${bodyContent}
   </div>
 </body>
 </html>`;
 
   const blob = new Blob(['\ufeff', wordDocumentHtml], {
-    type: 'application/msword;charset=utf-8'
+    type: 'application/msword;charset=utf-8',
   });
 
   const wordFilename = filename.endsWith('.docx') ? filename.replace(/\.docx$/, '.doc') : filename;

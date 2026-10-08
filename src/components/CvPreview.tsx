@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CVData } from '../types/cv';
 import { TemplateRenderer } from '../templates/TemplateRenderer';
 import { TEMPLATES } from '../templates/templatesRegistry';
@@ -69,7 +69,7 @@ export const CvPreview: React.FC<Props> = ({
 
   useEffect(() => {
     if (!userHasCv) {
-      setShowSamplePreview(true);
+      setShowSamplePreview((prev) => (!prev ? true : prev));
     }
   }, [userHasCv]);
 
@@ -79,21 +79,22 @@ export const CvPreview: React.FC<Props> = ({
   const [pageMarginMm, setPageMarginMm] = useState<PageMarginPreset>(() => cv.pageMargin || 20);
 
   useEffect(() => {
-    if (cv.pageMargin && cv.pageMargin !== pageMarginMm) {
-      setPageMarginMm(cv.pageMargin);
+    if (cv.pageMargin) {
+      setPageMarginMm((prev) => (prev !== cv.pageMargin ? cv.pageMargin! : prev));
     }
   }, [cv.pageMargin]);
 
   const handleSelectMargin = (newMargin: PageMarginPreset) => {
-    setPageMarginMm(newMargin);
+    setPageMarginMm((prev) => (prev !== newMargin ? newMargin : prev));
     if (onUpdatePageMargin) {
       onUpdatePageMargin(newMargin);
     }
   };
 
-  // Effective CV rendered in preview: falls back to Alexander Wright's profile if user CV is empty or sample is chosen
-  const effectiveCv: CVData = isUsingSample
-    ? {
+  // Effective CV rendered in preview: memoized to prevent re-creation on every render
+  const effectiveCv: CVData = useMemo(() => {
+    if (isUsingSample) {
+      return {
         ...ALEXANDER_WRIGHT_SAMPLE_CV,
         templateId: cv.templateId || 'modern-executive',
         themeColor: cv.themeColor || '#2563eb',
@@ -101,11 +102,32 @@ export const CvPreview: React.FC<Props> = ({
         fontSize: cv.fontSize || 'base',
         lineSpacing: cv.lineSpacing || 'normal',
         pageMargin: pageMarginMm
-      }
-    : {
-        ...cv,
-        pageMargin: pageMarginMm
       };
+    }
+    return {
+      ...cv,
+      pageMargin: pageMarginMm
+    };
+  }, [
+    isUsingSample,
+    cv.id,
+    cv.templateId,
+    cv.themeColor,
+    cv.fontFamily,
+    cv.fontSize,
+    cv.lineSpacing,
+    cv.summary,
+    cv.experiences,
+    cv.educations,
+    cv.skills,
+    cv.projects,
+    cv.certifications,
+    cv.languages,
+    cv.customSections,
+    cv.personalDetails,
+    cv.showPhoto,
+    pageMarginMm
+  ]);
 
   // Zoom mode: 'fit' (auto adjusts to container width so user sees complete page) or 'manual' (%)
   const [zoomMode, setZoomMode] = useState<'fit' | 'manual'>('fit');
@@ -140,7 +162,7 @@ export const CvPreview: React.FC<Props> = ({
         // Leave 48px padding (24px each side) for clean paper margins
         const availableWidth = containerWidth - 48;
         const scale = Math.min(1.2, Math.max(0.4, availableWidth / a4WidthPx));
-        setFitScale(scale);
+        setFitScale((prev) => (Math.abs(prev - scale) < 0.005 ? prev : scale));
       }
     };
 
@@ -170,8 +192,27 @@ export const CvPreview: React.FC<Props> = ({
           pageMarginMm,
           smartBreaksEnabled
         );
-        setSmartBreaks(result);
-        setTotalPages(result.totalPages);
+
+        setSmartBreaks((prev) => {
+          const heightsEqual =
+            prev.sliceHeightsMm.length === result.sliceHeightsMm.length &&
+            prev.sliceHeightsMm.every((h, i) => Math.abs(h - result.sliceHeightsMm[i]) < 0.2);
+          const offsetsEqual =
+            prev.sliceOffsetsMm.length === result.sliceOffsetsMm.length &&
+            prev.sliceOffsetsMm.every((o, i) => Math.abs(o - result.sliceOffsetsMm[i]) < 0.2);
+
+          if (
+            prev.totalPages === result.totalPages &&
+            prev.hasSmartAdjustment === result.hasSmartAdjustment &&
+            heightsEqual &&
+            offsetsEqual
+          ) {
+            return prev;
+          }
+          return result;
+        });
+
+        setTotalPages((prev) => (prev === result.totalPages ? prev : result.totalPages));
       }
     };
 
