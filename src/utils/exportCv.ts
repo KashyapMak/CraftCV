@@ -2939,7 +2939,540 @@ export const buildDocxDocument = (cv: CVData): Document => {
     });
   }
 
-  // 8. Default Executive Layout (Modern Executive, Geneva Grid, Silicon Accent, etc.)
+  // 8. Geneva Grid Template (Architectural Grid, Two-Tone Header, 2-Column Table)
+  if (templateId === 'geneva-grid') {
+    const nameParts = fullName.trim().split(' ');
+    const firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : fullName;
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+    const headerParas: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: firstName + (lastName ? ' ' : ''),
+            bold: true,
+            size: 42,
+            color: '0F172A',
+            font,
+          }),
+          ...(lastName
+            ? [
+                new TextRun({
+                  text: lastName,
+                  bold: true,
+                  size: 42,
+                  color: themeHex,
+                  font,
+                }),
+              ]
+            : []),
+        ],
+        spacing: { after: 30 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      headerParas.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 21,
+              color: '64748B',
+              font,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+    }
+
+    const contactRuns = getDocxContactRuns(p, font);
+    if (contactRuns.length > 0) {
+      headerParas.push(
+        new Paragraph({
+          children: contactRuns,
+          spacing: { after: 120 },
+        })
+      );
+    }
+
+    const headerTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.SINGLE, size: 24, color: themeHex },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              margins: { top: 120, bottom: 120, left: 100, right: 100 },
+              children: headerParas,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const leftCol: Paragraph[] = [
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxSkillsParagraphs(cv, font, themeHex),
+      ...getDocxLanguagesParagraphs(cv, font, themeHex),
+    ];
+
+    const rightCol: Paragraph[] = [
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxCertificationsParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex),
+    ];
+
+    const bodyTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: createDocxBorderNone(),
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 38, type: WidthType.PERCENTAGE },
+              margins: { top: 140, bottom: 140, left: 80, right: 160 },
+              children: leftCol,
+            }),
+            new TableCell({
+              width: { size: 62, type: WidthType.PERCENTAGE },
+              margins: { top: 140, bottom: 140, left: 160, right: 80 },
+              children: rightCol,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [headerTable, new Paragraph({ spacing: { after: 120 } }), bodyTable],
+        },
+      ],
+    });
+  }
+
+  // 9. Silicon Accent Template (Developer Sidebar with Vibrant Accent Role Badge & Callout)
+  if (templateId === 'silicon-accent') {
+    const leftCell: Paragraph[] = [
+      createSectionHeader('Contact', themeHex, font, { noBorder: true, size: 20 }),
+    ];
+    if (p.email) leftCell.push(new Paragraph({ children: [new TextRun({ text: `e: ${p.email}`, size: 18, color: '334155', font })], spacing: { after: 20 } }));
+    if (p.phone) leftCell.push(new Paragraph({ children: [new TextRun({ text: `p: ${p.phone}`, size: 18, color: '334155', font })], spacing: { after: 20 } }));
+    if (p.location) leftCell.push(new Paragraph({ children: [new TextRun({ text: p.location, size: 18, color: '334155', font })], spacing: { after: 20 } }));
+    if (p.github) leftCell.push(new Paragraph({ children: [new TextRun({ text: `gh: ${p.github.replace(/^https?:\/\/(www\.)?github\.com\//, '')}`, size: 18, color: '334155', font })], spacing: { after: 20 } }));
+    if (p.website) leftCell.push(new Paragraph({ children: [new TextRun({ text: `web: ${p.website.replace(/^https?:\/\//, '')}`, size: 18, color: '334155', font })], spacing: { after: 20 } }));
+    if (p.linkedin) leftCell.push(new Paragraph({ children: [new TextRun({ text: `in: ${p.linkedin.replace(/^https?:\/\/(www\.)?/, '')}`, size: 18, color: '334155', font })], spacing: { after: 20 } }));
+
+    leftCell.push(...getDocxSkillsParagraphs(cv, font, themeHex));
+    leftCell.push(...getDocxEducationParagraphs(cv, font, themeHex));
+    leftCell.push(...getDocxCertificationsParagraphs(cv, font, themeHex));
+    leftCell.push(...getDocxLanguagesParagraphs(cv, font, themeHex));
+
+    const rightCell: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({ text: fullName, bold: true, size: 42, color: '0F172A', font }),
+        ],
+        spacing: { after: 30 },
+      }),
+    ];
+    if (p.jobTitle) {
+      rightCell.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `[ ${p.jobTitle.toUpperCase()} ]`,
+              bold: true,
+              size: 21,
+              color: themeHex,
+              font,
+            }),
+          ],
+          spacing: { after: 120 },
+        })
+      );
+    }
+    rightCell.push(
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex)
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: createDocxBorderNone(),
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 34, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'F8FAFC', type: ShadingType.CLEAR },
+                      margins: { top: 180, bottom: 180, left: 180, right: 180 },
+                      children: leftCell,
+                    }),
+                    new TableCell({
+                      width: { size: 66, type: WidthType.PERCENTAGE },
+                      margins: { top: 180, bottom: 180, left: 240, right: 160 },
+                      children: rightCell,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    });
+  }
+
+  // 10. Modern Executive Template (Clean Dual-Column with Bold Header Accents)
+  if (templateId === 'modern-executive') {
+    const headerParas: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 44,
+            color: '0F172A',
+            font,
+          }),
+        ],
+        spacing: { after: 30 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      headerParas.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle,
+              bold: true,
+              size: 22,
+              color: themeHex,
+              font,
+            }),
+          ],
+          spacing: { after: 50 },
+        })
+      );
+    }
+
+    const contactRuns = getDocxContactRuns(p, font);
+    if (contactRuns.length > 0) {
+      headerParas.push(
+        new Paragraph({
+          children: contactRuns,
+          spacing: { after: 120 },
+        })
+      );
+    }
+
+    const headerTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.SINGLE, size: 24, color: themeHex },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              margins: { top: 120, bottom: 120, left: 60, right: 60 },
+              children: headerParas,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const leftCol: Paragraph[] = [
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxSkillsParagraphs(cv, font, themeHex),
+      ...getDocxCertificationsParagraphs(cv, font, themeHex),
+      ...getDocxLanguagesParagraphs(cv, font, themeHex),
+    ];
+
+    const rightCol: Paragraph[] = [
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex),
+    ];
+
+    const bodyTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: createDocxBorderNone(),
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 34, type: WidthType.PERCENTAGE },
+              margins: { top: 120, bottom: 120, left: 60, right: 160 },
+              children: leftCol,
+            }),
+            new TableCell({
+              width: { size: 66, type: WidthType.PERCENTAGE },
+              margins: { top: 120, bottom: 120, left: 160, right: 60 },
+              children: rightCol,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [headerTable, new Paragraph({ spacing: { after: 100 } }), bodyTable],
+        },
+      ],
+    });
+  }
+
+  // 11. Edinburgh Timeline Template (Continuous Timeline Rail, Chronological Milestone Blocks)
+  if (templateId === 'edinburgh-timeline') {
+    const edChildren: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName.toUpperCase(),
+            bold: true,
+            size: 42,
+            color: '0F172A',
+            font,
+          }),
+        ],
+        spacing: { after: 30 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      edChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 21,
+              color: themeHex,
+              font,
+            }),
+          ],
+          spacing: { after: 50 },
+        })
+      );
+    }
+
+    const contactRuns = getDocxContactRuns(p, font);
+    if (contactRuns.length > 0) {
+      edChildren.push(
+        new Paragraph({
+          children: contactRuns,
+          spacing: { after: 120 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 16, color: themeHex, space: 6 } },
+        })
+      );
+    }
+
+    edChildren.push(
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxSkillsParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxCertificationsParagraphs(cv, font, themeHex),
+      ...getDocxLanguagesParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex)
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: edChildren,
+        },
+      ],
+    });
+  }
+
+  // 12. Cambridge Accent Template (Modern Color Accent Header, Card Dividers)
+  if (templateId === 'cambridge-accent') {
+    const headerParas: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 42,
+            color: 'FFFFFF',
+            font,
+          }),
+        ],
+        spacing: { after: 20 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      headerParas.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle.toUpperCase(),
+              bold: true,
+              size: 21,
+              color: 'E0E7FF',
+              font,
+            }),
+          ],
+          spacing: { after: 50 },
+        })
+      );
+    }
+
+    const contactRuns = getDocxContactRuns(p, font, true);
+    if (contactRuns.length > 0) {
+      headerParas.push(
+        new Paragraph({
+          children: contactRuns,
+          spacing: { after: 30 },
+        })
+      );
+    }
+
+    const headerTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: createDocxBorderNone(),
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              shading: { fill: themeHex, type: ShadingType.CLEAR },
+              margins: { top: 200, bottom: 200, left: 240, right: 240 },
+              children: headerParas,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const bodyParas: Paragraph[] = [
+      ...getDocxSummaryParagraphs(cv, font, themeHex),
+      ...getDocxExperienceParagraphs(cv, font, themeHex),
+      ...getDocxSkillsParagraphs(cv, font, themeHex),
+      ...getDocxProjectsParagraphs(cv, font, themeHex),
+      ...getDocxEducationParagraphs(cv, font, themeHex),
+      ...getDocxCertificationsParagraphs(cv, font, themeHex),
+      ...getDocxLanguagesParagraphs(cv, font, themeHex),
+      ...getDocxCustomSectionsParagraphs(cv, font, themeHex),
+    ];
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 600, bottom: 720, left: 720, right: 720 } } },
+          children: [headerTable, new Paragraph({ spacing: { after: 120 } }), ...bodyParas],
+        },
+      ],
+    });
+  }
+
+  // 13. Minimalist Clean Template (Typography-First Design, Hairline Dividers, Maximum ATS Readability)
+  if (templateId === 'minimalist-clean') {
+    const minChildren: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 40,
+            color: '0F172A',
+            font,
+          }),
+        ],
+        spacing: { after: 20 },
+      }),
+    ];
+
+    if (p.jobTitle) {
+      minChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: p.jobTitle,
+              bold: true,
+              size: 21,
+              color: '475569',
+              font,
+            }),
+          ],
+          spacing: { after: 40 },
+        })
+      );
+    }
+
+    const contactRuns = getDocxContactRuns(p, font);
+    if (contactRuns.length > 0) {
+      minChildren.push(
+        new Paragraph({
+          children: contactRuns,
+          spacing: { after: 120 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: 'E2E8F0', space: 6 } },
+        })
+      );
+    }
+
+    minChildren.push(
+      ...getDocxSummaryParagraphs(cv, font, '0F172A'),
+      ...getDocxExperienceParagraphs(cv, font, '0F172A'),
+      ...getDocxEducationParagraphs(cv, font, '0F172A'),
+      ...getDocxSkillsParagraphs(cv, font, '0F172A'),
+      ...getDocxProjectsParagraphs(cv, font, '0F172A'),
+      ...getDocxCertificationsParagraphs(cv, font, '0F172A'),
+      ...getDocxLanguagesParagraphs(cv, font, '0F172A'),
+      ...getDocxCustomSectionsParagraphs(cv, font, '0F172A')
+    );
+
+    return new Document({
+      sections: [
+        {
+          properties: { page: { margin: { top: 800, bottom: 800, left: 850, right: 850 } } },
+          children: minChildren,
+        },
+      ],
+    });
+  }
+
+  // 14. Default Executive Layout (Universal Fallback)
   const children: Paragraph[] = [];
 
   // 1. Candidate Full Name Header
@@ -3560,9 +4093,25 @@ const ensureBrowserDocxEnvironment = () => {
 };
 
 /**
+ * Sanitizes template HTML before conversion with HTMLtoDOCX
+ * Recursively unwraps any <div> containers inside table cells (<td>)
+ * because @turbodocx/html-to-docx drops table cell contents wrapped in <div> tags
+ */
+export const sanitizeHtmlForDocx = (html: string): string => {
+  let cleaned = html;
+  while (/<div(?:\s+style="[^"]*")?[^>]*>([\s\S]*?)<\/div>/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<div(?:\s+style="([^"]*)")?[^>]*>([\s\S]*?)<\/div>/gi, (_d, _style, inner) => inner);
+  }
+  return cleaned;
+};
+
+/**
  * Word (.docx) Generator
- * Generates an authentic Microsoft Word document preserving full layout,
- * custom theme accent colors, colored section header underlines, company accents, and bulleted lists
+ * Primary: Generates an authentic Microsoft Word document using the docx library,
+ * guaranteeing 100% extraction of all candidate sections, multi-column tables, colors,
+ * borders, bullets, and typography matching each selected template without any data loss.
+ * Secondary fallback: Sanitized HTMLtoDOCX conversion (with unwrapped table cell divs).
+ * Tertiary fallback: Word Office-HTML (.doc).
  */
 export const exportToDocx = async (cv: CVData): Promise<void> => {
   ensureBrowserDocxEnvironment();
@@ -3572,49 +4121,50 @@ export const exportToDocx = async (cv: CVData): Promise<void> => {
   const filename = `${safeName}_${templateTag}_resume.docx`;
 
   try {
-    // 1. Generate rich template-faithful HTML with full layout, sidebars, tables, and colors
-    const htmlContent = renderTemplateToWordHtml(cv);
-
-    // 2. Convert to real OpenXML .docx binary using HTMLtoDOCX
-    const docxResult = await HTMLtoDOCX(htmlContent, null, {
-      table: { row: { cantSplit: true } },
-      footer: false,
-      pageNumber: false,
-      margins: {
-        top: 720,
-        right: 720,
-        bottom: 720,
-        left: 720,
-      },
-    });
-
-    let blob: Blob;
-    if (docxResult instanceof Blob) {
-      blob = docxResult;
-    } else if (docxResult && typeof (docxResult as any).buffer !== 'undefined') {
-      const u8 = new Uint8Array(
-        (docxResult as any).buffer,
-        (docxResult as any).byteOffset || 0,
-        (docxResult as any).byteLength || (docxResult as any).length
-      );
-      blob = new Blob([u8], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      });
-    } else {
-      blob = new Blob([docxResult as unknown as BlobPart], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      });
-    }
-
+    // 1. Primary: Direct high-fidelity OpenXML generation via docx library
+    // Guarantees zero dropped fields (Name, Position, Summary, Experience, Education, Skills, Projects, Certifications, Languages, Custom Sections)
+    const doc = buildDocxDocument(cv);
+    const blob = await Packer.toBlob(doc);
     downloadBlob(blob, filename);
-  } catch (err) {
-    console.warn('HTMLtoDOCX direct generation encountered an issue, trying docx builder:', err);
+  } catch (docxErr) {
+    console.warn('Docx Packer primary generation encountered an issue, trying sanitized HTML conversion fallback:', docxErr);
     try {
-      const doc = buildDocxDocument(cv);
-      const blob = await Packer.toBlob(doc);
+      // 2. Fallback: Sanitized HTMLtoDOCX (all table cell divs unwrapped)
+      const rawHtml = renderTemplateToWordHtml(cv);
+      const cleanHtml = sanitizeHtmlForDocx(rawHtml);
+      const docxResult = await HTMLtoDOCX(cleanHtml, null, {
+        table: { row: { cantSplit: true } },
+        footer: false,
+        pageNumber: false,
+        margins: {
+          top: 720,
+          right: 720,
+          bottom: 720,
+          left: 720,
+        },
+      });
+
+      let blob: Blob;
+      if (docxResult instanceof Blob) {
+        blob = docxResult;
+      } else if (docxResult && typeof (docxResult as any).buffer !== 'undefined') {
+        const u8 = new Uint8Array(
+          (docxResult as any).buffer,
+          (docxResult as any).byteOffset || 0,
+          (docxResult as any).byteLength || (docxResult as any).length
+        );
+        blob = new Blob([u8], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+      } else {
+        blob = new Blob([docxResult as unknown as BlobPart], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+      }
+
       downloadBlob(blob, filename);
-    } catch (docxErr) {
-      console.warn('Docx Packer encountered an issue, falling back to Word template document:', docxErr);
+    } catch (htmlErr) {
+      console.warn('HTMLtoDOCX fallback encountered an issue, falling back to Word template document:', htmlErr);
       exportWordHtmlDocument(cv, filename);
     }
   }

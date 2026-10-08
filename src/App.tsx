@@ -30,7 +30,7 @@ import { CvDashboardModal } from './components/CvDashboardModal';
 import { HomePage } from './components/HomePage';
 import { TemplateRenderer } from './templates/TemplateRenderer';
 import { ALEXANDER_WRIGHT_SAMPLE_CV } from './data/sampleCV';
-import { exportDirectPdf, exportToDocx, exportWordHtmlDocument, exportStandaloneHtml, normalizeTemplateId } from './utils/exportCv';
+import { exportDirectPdf, exportToDocx, exportWordHtmlDocument, exportStandaloneHtml, normalizeTemplateId, renderTemplateToWordHtml } from './utils/exportCv';
 import {
   Eye,
   Edit3,
@@ -248,9 +248,10 @@ export default function App() {
       setIsExporting(null);
     } else if (format === 'html') {
       const el = document.getElementById('cv-printable-document');
-      if (el) {
-        exportStandaloneHtml(activeCv, el.innerHTML);
-      }
+      const renderedHtml = el?.innerHTML && el.innerHTML.trim().length > 50
+        ? el.innerHTML
+        : renderTemplateToWordHtml(activeCv);
+      exportStandaloneHtml(activeCv, renderedHtml);
     } else if (format === 'json') {
       exportSingleCvJson(activeCv);
     }
@@ -793,7 +794,7 @@ export default function App() {
                   : layoutMode === 'split'
                   ? 'lg:col-span-6'
                   : 'fixed -left-[9999px] top-0 w-[210mm] opacity-100 pointer-events-none'
-              } ${mobileView === 'preview' ? 'block' : layoutMode === 'editor' ? 'hidden lg:block' : 'hidden lg:flex'}`}
+              } ${mobileView === 'preview' ? 'block' : layoutMode === 'editor' ? 'max-lg:fixed max-lg:-left-[9999px] max-lg:top-0 max-lg:opacity-0 max-lg:pointer-events-none lg:block' : 'max-lg:fixed max-lg:-left-[9999px] max-lg:top-0 max-lg:opacity-0 max-lg:pointer-events-none lg:flex'}`}
             >
               <CvPreview
                 cv={activeCv}
